@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2026-12-02
+reason = "Affected minimatch versions are dev-only ESLint dependencies; ESLint does not yet accept patched minimatch 11. Review after an upstream ESLint release."

@@ -1,0 +1,36 @@
+{
+  "name": "hexlet-calendar",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "src/HexletCalendar.Web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace hexlet-calendar-web",
+    "build": "npm run build --workspace hexlet-calendar-web",
+    "lint": "npm run lint:web && npm run lint:dotnet && npm run lint:deps && npm run lint:commits",
+    "lint:web": "eslint .",
+    "lint:dotnet": "dotnet format src/HexletCalendar.Api/HexletCalendar.Api.csproj --verify-no-changes && dotnet format tests/HexletCalendar.Api.Tests/HexletCalendar.Api.Tests.csproj --verify-no-changes",
+    "lint:deps": "knip",
+    "lint:commits": "node scripts/check-commits.mjs",
+    "test": "npm run test:web && npm run test:api",
+    "test:web": "vitest run --config vitest.config.ts",
+    "test:api": "dotnet test tests/HexletCalendar.Api.Tests/HexletCalendar.Api.Tests.csproj --configuration Release",
+    "check": "npm run lint && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@eslint/js": "^9.39.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "jsdom": "^27.0.0",
+    "knip": "6.44.0",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.0.0"
+  }
+}

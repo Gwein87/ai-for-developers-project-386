@@ -97,3 +97,20 @@ x86/
 
 # Built Visual Studio Code Extensions
 *.vsix
+### Frontend
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+
+### SQLite
+*.db
+*.db-shm
+*.db-wal
+
+### Local environment
+.env
+.env.*
+!.env.example

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "tests/HexletCalendar.Web.Tests/**/*.test.tsx"
+      ],
+      "project": [
+        "tests/HexletCalendar.Web.Tests/**/*.{ts,tsx}",
+        "scripts/**/*.mjs"
+      ]
+    },
+    "src/HexletCalendar.Web": {}
+  }
+}

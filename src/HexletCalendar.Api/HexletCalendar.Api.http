@@ -1,0 +1,6 @@
+@HexletCalendar.Api_HostAddress = http://localhost:5294
+
+GET {{HexletCalendar.Api_HostAddress}}/api/health
+Accept: text/plain
+
+###

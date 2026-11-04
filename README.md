@@ -2,6 +2,8 @@
 
 Сервис бронирования звонков. Владелец создает типы встреч с указанием наименования, описания и длительности. Гость выбирает подходящие время и тип встречи и совершает запись на звонок.
 
+Правила сообщений коммитов описаны в [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Сценарий работы
 
 ### Владелец календаря
@@ -16,3 +18,102 @@
 3. Выбирает свободное время и подтверждает запись на звонок.
 
 Продолжительность слота определяется выбранным типом встречи. После бронирования занятый интервал исключается из доступных. Встречи не могут пересекаться по времени, даже если относятся к разным типам.
+
+## Стек и структура
+
+- Бэкенд: .NET 10 и ASP.NET Core. Для базы запланирован SQLite через EF Core.
+- Фронтенд: React, TypeScript, Vite, Tailwind CSS и [shadcn/ui](https://ui.shadcn.com/docs/installation/vite).
+- Исходный код находится в `src`, тесты — в `tests`.
+- В `HexletCalendar.slnx` включены только проекты бэкенда.
+
+```text
+src/
+  HexletCalendar.Api/             HTTP API бэкенда
+  HexletCalendar.Web/             React-приложение
+tests/
+  HexletCalendar.Api.Tests/       интеграционные тесты API
+  HexletCalendar.Web.Tests/       тесты React-приложения
+```
+
+Пока бэкенд состоит из одного проекта `HexletCalendar.Api`. Внутренняя структура
+для доменной модели и сценариев будет добавляться по мере реализации календаря.
+
+## Локальный запуск
+
+Требуются .NET SDK 10 и Node.js 20.19+ либо 22.12+ с npm.
+Команды ниже выполняются из корня репозитория.
+
+```sh
+dotnet restore src/HexletCalendar.Api/HexletCalendar.Api.csproj
+dotnet tool restore
+npm install
+```
+
+Запустите бэкенд и фронтенд в двух терминалах:
+
+```sh
+dotnet run --project src/HexletCalendar.Api --launch-profile http
+```
+
+```sh
+npm run dev
+```
+
+Фронтенд: <http://localhost:5173>. Vite перенаправляет запросы `/api` на
+<http://localhost:5294>. На стартовой странице есть кнопка проверки соединения.
+API предоставляет `GET /api/health`; в Development также доступен
+`GET /openapi/v1.json`. Health-проверка подтверждает работу API, без обращения к БД.
+В production запросы `/api` должны направляться к бэкенду через reverse proxy.
+
+## Сборка и проверки
+
+```sh
+npm run check
+```
+
+Команда запускает линтер, тесты фронтенда и бэкенда, а затем production-сборку
+React-приложения. GitHub Actions выполняет эту же команду при каждом `push`.
+
+В обязательные quality gates входят:
+
+- ESLint и Knip для frontend-кода и зависимостей;
+- анализаторы .NET SDK, `dotnet format` и NuGet Audit;
+- Commitlint для новых сообщений коммитов;
+- jactionlint для поддерживаемых workflow GitHub Actions;
+- OSV-Scanner при каждом push и по еженедельному расписанию.
+
+OSV-Scanner временно исключает `GHSA-g3hv-75wg-m249` для dev-only зависимостей
+ESLint до появления совместимого исправления. Исключение пересматривается
+2 декабря 2026 года и задано в `osv-scanner.toml`.
+
+Фронтенд тестируется с помощью Vitest и React Testing Library в окружении
+jsdom. Дымовой тест монтирует корневой компонент и проверяет, что стартовый
+экран приложения отображается.
+
+Бэкенд тестируется с помощью xUnit и `Microsoft.AspNetCore.Mvc.Testing`.
+Дымовой тест поднимает ASP.NET Core-приложение в памяти и проверяет ответ
+`GET /api/health`.
+
+Решение содержит API и его тесты. Для сборки бэкенда используйте:
+
+```sh
+dotnet build src/HexletCalendar.Api/HexletCalendar.Api.csproj
+```
+
+Компоненты shadcn/ui находятся в `src/HexletCalendar.Web/src/components/ui`.
+Настройки CLI — в `components.json`. Для добавления компонентов:
+
+```sh
+cd src/HexletCalendar.Web
+npx shadcn@latest add dialog
+```
+
+## SQLite и миграции
+
+Строка подключения для будущего SQLite задана как `ConnectionStrings:Calendar`
+в `appsettings.json`. Слой хранения данных и `DbContext` пока не добавлены.
+
+**Перед созданием каждой миграции необходимо получить разрешение пользователя.**
+Все миграции создаются и применяются только через `dotnet ef` CLI.
+Миграции пока не созданы, приложение не создаёт базу автоматически. Команда
+миграции будет добавлена после появления модели и `DbContext` в API.
