@@ -55,3 +55,20 @@
 
 - Следуй типам, областям, языку и формату Conventional Commits из
   `CONTRIBUTING.md`.
+
+## Навыки агентов
+
+### Трекер задач
+
+Задачи и спецификации хранятся в GitHub Issues. Подробнее см.
+`docs/agents/issue-tracker.md`.
+
+### Метки triage
+
+Используются стандартные метки triage. Подробнее см.
+`docs/agents/triage-labels.md`.
+
+### Документация предметной области
+
+Используется структура single-context: корневой `GLOSSARY.md` и ADR в
+`docs/adr/`. Подробнее см. `docs/agents/domain.md`.
