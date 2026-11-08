@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/HexletCalendar.Api/HexletCalendar.Api.csproj" />
+    <Project Path="src/HexletCalendar.Data/HexletCalendar.Data.csproj" />
+    <Project Path="src/HexletCalendar.ContractGenerator/HexletCalendar.ContractGenerator.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/HexletCalendar.Api.Tests/HexletCalendar.Api.Tests.csproj" />

@@ -1,6 +1,6 @@
-import { ArrowLeft, CalendarDays } from 'lucide-react'
+import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import EventTypesScreen from './EventTypesScreen'
 
 export default function App() {
   const pathname = window.location.pathname.replace(/\/$/, '')
@@ -35,21 +35,7 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-6 py-20 sm:py-32">
         {section ? (
-          <Card className="max-w-xl">
-            <CardHeader>
-              <h1 className="text-2xl font-semibold tracking-tight">Раздел готовится</h1>
-              <CardTitle>{section}</CardTitle>
-              <CardDescription>Этот раздел скоро появится в сервисе.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline">
-                <a href="/">
-                  <ArrowLeft aria-hidden="true" />
-                  На главную
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
+          <EventTypesScreen owner={section === 'Админка'} />
         ) : (
           <div className="max-w-2xl space-y-6">
             <div className="flex size-14 items-center justify-center rounded-2xl bg-muted">
@@ -59,7 +45,7 @@ export default function App() {
               Календарь звонков
             </h1>
             <p className="max-w-xl text-lg leading-8 text-muted-foreground">
-              Выберите тип встречи и удобное свободное время — сервис поможет записаться
+              Выберите тип события и удобное свободное время — сервис поможет записаться
               на звонок без долгих согласований.
             </p>
           </div>

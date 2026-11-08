@@ -1,0 +1,2 @@
+# Preserve generated contract artifacts byte-for-byte across operating systems.
+src/HexletCalendar.Contracts/generated/* text eol=lf

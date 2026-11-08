@@ -14,6 +14,7 @@ public sealed class ApiSmokeTests(WebApplicationFactory<Program> factory)
             new Uri("/api/health", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(await ApiContract.ValidateAsync(response, "/api/health", "get"));
         Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
     }
 }
