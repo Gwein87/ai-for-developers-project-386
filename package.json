@@ -16,7 +16,14 @@
     "test": "npm run test:web && npm run test:api",
     "test:web": "vitest run --config vitest.config.ts",
     "test:api": "dotnet test tests/HexletCalendar.Api.Tests/HexletCalendar.Api.Tests.csproj --configuration Release",
-    "check": "npm run lint && npm test && npm run build"
+    "contract:generate": "tsp compile src/HexletCalendar.Contracts --warn-as-error && openapi-typescript src/HexletCalendar.Contracts/generated/openapi.json -o src/HexletCalendar.Contracts/generated/schema.d.ts",
+    "contract:check": "node scripts/check-contract-toolchain.mjs && tsc --noEmit --strict --skipLibCheck --module NodeNext --moduleResolution NodeNext tests/HexletCalendar.Web.Tests/ContractProbeTypes.test.tsx",
+    "check": "npm run contract:check && npm run lint && npm test && npm run build"
+  },
+  "overrides": {
+    "@scalar/json-magic@0.13.5": {
+      "undici": "7.30.1"
+    }
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.3",
@@ -24,12 +31,18 @@
     "@eslint/js": "^9.39.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
+    "@typespec/compiler": "1.17.0",
+    "@typespec/http": "1.17.0",
+    "@typespec/openapi": "1.17.0",
+    "@typespec/openapi3": "1.17.0",
     "eslint": "^9.39.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^27.0.0",
     "knip": "6.44.0",
+    "openapi-typescript": "7.10.1",
+    "typescript": "5.9.3",
     "typescript-eslint": "^8.46.0",
     "vitest": "^4.0.0"
   }
