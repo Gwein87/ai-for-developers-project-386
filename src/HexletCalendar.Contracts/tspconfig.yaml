@@ -8,3 +8,4 @@ options:
     openapi-versions:
       - "3.0.0"
     new-line: lf
+    seal-object-schemas: true

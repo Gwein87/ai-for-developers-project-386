@@ -47,6 +47,9 @@
             "type": "string",
             "nullable": true
           }
+        },
+        "additionalProperties": {
+          "not": {}
         }
       },
       "ProbeItem": {
@@ -69,6 +72,9 @@
           "detail": {
             "$ref": "#/components/schemas/ProbeDetail"
           }
+        },
+        "additionalProperties": {
+          "not": {}
         }
       },
       "ProbeProblem": {
@@ -84,6 +90,9 @@
           "message": {
             "type": "string"
           }
+        },
+        "additionalProperties": {
+          "not": {}
         }
       },
       "ProbeTimestamp": {

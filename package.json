@@ -16,7 +16,7 @@
     "test": "npm run test:web && npm run test:api",
     "test:web": "vitest run --config vitest.config.ts",
     "test:api": "dotnet test tests/HexletCalendar.Api.Tests/HexletCalendar.Api.Tests.csproj --configuration Release",
-    "contract:generate": "tsp compile src/HexletCalendar.Contracts --warn-as-error && openapi-typescript src/HexletCalendar.Contracts/generated/openapi.json -o src/HexletCalendar.Contracts/generated/schema.d.ts",
+    "contract:generate": "tsp compile src/HexletCalendar.Contracts --warn-as-error && openapi-typescript src/HexletCalendar.Contracts/generated/openapi.json -o src/HexletCalendar.Contracts/generated/schema.d.ts && node scripts/generate-csharp-probe.mjs",
     "contract:check": "node scripts/check-contract-toolchain.mjs && tsc --noEmit --strict --skipLibCheck --module NodeNext --moduleResolution NodeNext tests/HexletCalendar.Web.Tests/ContractProbeTypes.test.tsx",
     "check": "npm run contract:check && npm run lint && npm test && npm run build"
   },

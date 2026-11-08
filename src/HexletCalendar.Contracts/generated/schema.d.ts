@@ -26,16 +26,22 @@ export interface components {
     schemas: {
         ProbeDetail: {
             note: string | null;
+        } & {
+            [key: string]: unknown;
         };
         ProbeItem: {
             /** Format: int32 */
             id: number;
             createdAt: components["schemas"]["ProbeTimestamp"];
             detail: components["schemas"]["ProbeDetail"];
+        } & {
+            [key: string]: unknown;
         };
         ProbeProblem: {
             code: string;
             message: string;
+        } & {
+            [key: string]: unknown;
         };
         /** Format: date-time */
         ProbeTimestamp: string;
