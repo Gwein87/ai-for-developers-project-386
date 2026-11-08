@@ -47,7 +47,9 @@ npm run check
 ```
 
 Команда contract:generate запускает локальный tsp compile с --warn-as-error, затем локальный openapi-typescript.
-Настройки emitter задают OpenAPI 3.0.0, JSON и LF.
+Настройки emitter задают OpenAPI 3.0.0, JSON и LF. Правило .gitattributes сохраняет
+LF генерируемых артефактов при checkout в Windows и Linux; настройки emitter
+сами по себе не отменяют core.autocrlf.
 Команда contract:check компилирует модель для проверки доступности HTTP-операции и operationId, затем дважды генерирует JSON и .d.ts во временные каталоги и сравнивает их с сохранёнными файлами.
 Отсутствующий или изменённый проверяемый артефакт вызывает ошибку.
 Отдельный tsc --noEmit проверяет реальное использование сгенерированного типа в тесте.
