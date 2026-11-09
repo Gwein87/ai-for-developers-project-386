@@ -14,6 +14,76 @@ namespace HexletCalendar.Contracts.Generated
 
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Availability
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypeId")]
+        [System.ComponentModel.DataAnnotations.Range(1, 2147483647)]
+        public int EventTypeId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timeZone")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^Europe/Moscow$")]
+        public string TimeZone { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverNow")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")]
+        public string ServerNow { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("windowStartDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}$")]
+        public string WindowStartDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("windowEndDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}$")]
+        public string WindowEndDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("days")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(14)]
+        [System.ComponentModel.DataAnnotations.MaxLength(14)]
+        public System.Collections.Generic.ICollection<AvailabilityDay> Days { get; set; } = new System.Collections.ObjectModel.Collection<AvailabilityDay>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AvailabilityDay
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("date")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}$")]
+        public string Date { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("slots")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<AvailabilitySlot> Slots { get; set; } = new System.Collections.ObjectModel.Collection<AvailabilitySlot>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AvailabilitySlot
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("startAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00Z$")]
+        public string StartAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("endAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00Z$")]
+        public string EndAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isAvailable")]
+        public bool IsAvailable { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateEventType
     {
 

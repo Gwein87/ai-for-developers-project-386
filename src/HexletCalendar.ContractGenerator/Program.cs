@@ -19,6 +19,7 @@ var settings = new CSharpClientGeneratorSettings
         Namespace = "HexletCalendar.Contracts.Generated",
         JsonLibrary = CSharpJsonLibrary.SystemTextJson,
         DateTimeType = "string",
+        DateType = "string",
         GenerateDataAnnotations = true,
         GenerateNullableReferenceTypes = true,
         GenerateOptionalPropertiesAsNullable = true,

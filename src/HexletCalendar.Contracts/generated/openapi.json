@@ -80,6 +80,63 @@
         }
       }
     },
+    "/api/event-types/{id}/availability": {
+      "get": {
+        "operationId": "getAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Availability"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "getHealth",
@@ -104,6 +161,91 @@
   },
   "components": {
     "schemas": {
+      "Availability": {
+        "type": "object",
+        "required": [
+          "eventTypeId",
+          "timeZone",
+          "serverNow",
+          "windowStartDate",
+          "windowEndDate",
+          "days"
+        ],
+        "properties": {
+          "eventTypeId": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "timeZone": {
+            "type": "string",
+            "pattern": "^Europe/Moscow$"
+          },
+          "serverNow": {
+            "$ref": "#/components/schemas/ServerTimestamp"
+          },
+          "windowStartDate": {
+            "$ref": "#/components/schemas/CalendarDate"
+          },
+          "windowEndDate": {
+            "$ref": "#/components/schemas/CalendarDate"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityDay"
+            },
+            "minItems": 14,
+            "maxItems": 14
+          }
+        },
+        "additionalProperties": false
+      },
+      "AvailabilityDay": {
+        "type": "object",
+        "required": [
+          "date",
+          "slots"
+        ],
+        "properties": {
+          "date": {
+            "$ref": "#/components/schemas/CalendarDate"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlot"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AvailabilitySlot": {
+        "type": "object",
+        "required": [
+          "startAt",
+          "endAt",
+          "isAvailable"
+        ],
+        "properties": {
+          "startAt": {
+            "$ref": "#/components/schemas/SlotTimestamp"
+          },
+          "endAt": {
+            "$ref": "#/components/schemas/SlotTimestamp"
+          },
+          "isAvailable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CalendarDate": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+        "format": "date"
+      },
       "CreateEventType": {
         "type": "object",
         "required": [
@@ -206,6 +348,16 @@
           }
         },
         "additionalProperties": false
+      },
+      "ServerTimestamp": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+        "format": "date-time"
+      },
+      "SlotTimestamp": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:00Z$",
+        "format": "date-time"
       },
       "ValidationProblem": {
         "type": "object",

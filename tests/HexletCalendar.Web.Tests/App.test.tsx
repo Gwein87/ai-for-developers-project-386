@@ -1,9 +1,44 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import App from '../../src/HexletCalendar.Web/src/App'
 
 afterEach(() => {
+  vi.useRealTimers()
   window.history.replaceState(null, '', '/')
+  vi.unstubAllEnvs()
+})
+
+it('expires a slot with server time and refreshes the window after Moscow midnight', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-11-09T06:14:58Z'))
+  const first = availability()
+  first.serverNow = '2026-11-09T06:14:58Z'
+  const shifted = availability()
+  shifted.serverNow = '2026-11-09T21:00:01Z'
+  shifted.windowStartDate = '2026-11-10'
+  shifted.windowEndDate = '2026-11-23'
+  shifted.days = shifted.days.map((day, index) => ({ ...day, date: new Date(Date.UTC(2026, 10, 10 + index)).toISOString().slice(0, 10) }))
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(first)))
+    .mockResolvedValueOnce(new Response(JSON.stringify(shifted)))
+  vi.stubGlobal('fetch', fetchMock)
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  fireEvent.click(screen.getByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  expect(screen.getByRole('button', { name: '09:15–10:00' })).toBeEnabled()
+  await act(async () => { vi.advanceTimersByTime(2_000) })
+  expect(screen.getByRole('button', { name: '09:15–10:00' })).toBeDisabled()
+  vi.setSystemTime(new Date('2026-11-09T20:59:59Z'))
+  await act(async () => { vi.advanceTimersByTime(2_000); await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  expect(fetchMock).toHaveBeenCalledTimes(3)
+  expect(screen.getByRole('button', { name: '2026-11-23' })).toBeEnabled()
 })
 
 it('renders the welcome page with the service description and navigation', () => {
@@ -20,6 +55,89 @@ it('renders the welcome page with the service description and navigation', () =>
   expect(navigation.getByRole('link', { name: 'Записаться' })).toHaveAttribute('href', '/booking')
   expect(navigation.getByRole('link', { name: 'Админка' })).toHaveAttribute('href', '/admin')
   expect(screen.queryByRole('button', { name: 'Проверить API' })).not.toBeInTheDocument()
+})
+
+it.each(['UTC', 'Pacific/Honolulu', 'Asia/Tokyo'])('lets a guest choose a future Moscow slot on a separate calendar screen and continue in %s', async timezone => {
+  vi.stubEnv('TZ', timezone)
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [eventType] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(availability()))))
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' })
+  expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  expect(await screen.findByRole('heading', { name: 'Выберите дату и время' })).toBeInTheDocument()
+  expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+  expect(screen.getByText('Московское время, UTC+3')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '2026-11-08' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '2026-11-23' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: '2026-11-22' }))
+  expect(screen.getByRole('button', { name: '09:00–09:45' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: '09:15–10:00' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  expect(screen.getByRole('heading', { name: 'Подтвердите бронирование' })).toBeInTheDocument()
+  expect(screen.getByText('Разбор проекта')).toBeInTheDocument()
+  expect(screen.getByText('22 ноября 2026 г.')).toBeInTheDocument()
+  expect(screen.getByText('09:15–10:00')).toBeInTheDocument()
+})
+
+function availability() {
+  return {
+    eventTypeId: 77, timeZone: 'Europe/Moscow', serverNow: '2026-11-09T05:10:37Z', windowStartDate: '2026-11-09', windowEndDate: '2026-11-22',
+    days: Array.from({ length: 14 }, (_, offset) => {
+      const date = new Date(Date.UTC(2026, 10, 9 + offset)).toISOString().slice(0, 10)
+      return { date, slots: [
+        { startAt: `${date}T06:00:00Z`, endAt: `${date}T06:45:00Z`, isAvailable: false },
+        { startAt: `${date}T06:15:00Z`, endAt: `${date}T07:00:00Z`, isAvailable: true },
+      ] }
+    }),
+  }
+}
+
+it.each([false, true])('keeps occupied dates selectable and shows empty availability (whole window: %s)', async wholeWindow => {
+  const calendar = availability()
+  for (const [index, day] of calendar.days.entries()) {
+    if (wholeWindow || index === 0) day.slots.forEach(slot => { slot.isAvailable = false })
+  }
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(calendar))))
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  expect(await screen.findByText('На эту дату свободного времени нет')).toBeInTheDocument()
+  expect(screen.getByRole('group', { name: 'Календарь' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '2026-11-09' })).toBeEnabled()
+  if (wholeWindow) expect(screen.getByText('В ближайшие 14 дней свободного времени нет')).toBeInTheDocument()
+  else expect(screen.queryByText('В ближайшие 14 дней свободного времени нет')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '2026-11-22' }))
+  expect(screen.getByRole('button', { name: '2026-11-22' })).toHaveAttribute('aria-pressed', 'true')
+  if (wholeWindow) expect(screen.getByRole('button', { name: '09:15–10:00' })).toBeDisabled()
+  else expect(screen.getByRole('button', { name: '09:15–10:00' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled()
+})
+
+it('distinguishes an availability loading failure from empty dates and retries', async () => {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }] })))
+    .mockRejectedValueOnce(new Error('Offline'))
+    .mockResolvedValueOnce(new Response(JSON.stringify(availability()))))
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось загрузить доступность')
+  expect(screen.queryByText('На эту дату свободного времени нет')).not.toBeInTheDocument()
+  expect(screen.queryByText('В ближайшие 14 дней свободного времени нет')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByRole('button', { name: '2026-11-22' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '09:15–10:00' })).toBeEnabled()
 })
 
 it('shows a distinct loading and empty state to the guest', async () => {

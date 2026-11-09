@@ -11,6 +11,7 @@ builder.Services.AddScoped(_ => new CalendarDbContext(
         .UseSqlite(builder.Configuration.GetConnectionString("Calendar"))
         .Options));
 builder.Services.AddHealthChecks();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddProblemDetails();
 
 var requestJson = new JsonSerializerOptions(JsonSerializerDefaults.Web)
@@ -27,6 +28,7 @@ if (app.Environment.IsDevelopment())
         Path.Combine(AppContext.BaseDirectory, "Contracts", "openapi.json"), "application/json"));
 }
 app.MapHealthChecks("/api/health");
+app.MapGet("/api/event-types/{id}/availability", AvailabilityEndpoint.GetAsync);
 app.MapGet("/api/event-types", async (CalendarDbContext database, CancellationToken cancellation) =>
 {
     var items = await database.EventTypes.OrderBy(item => item.Id)

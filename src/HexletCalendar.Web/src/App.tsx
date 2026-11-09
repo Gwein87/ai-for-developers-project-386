@@ -1,6 +1,7 @@
 import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import EventTypesScreen from './EventTypesScreen'
+import BookingScreen from './BookingScreen'
 
 export default function App() {
   const pathname = window.location.pathname.replace(/\/$/, '')
@@ -35,7 +36,7 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-6 py-20 sm:py-32">
         {section ? (
-          <EventTypesScreen owner={section === 'Админка'} />
+          section === 'Админка' ? <EventTypesScreen owner /> : <BookingScreen />
         ) : (
           <div className="max-w-2xl space-y-6">
             <div className="flex size-14 items-center justify-center rounded-2xl bg-muted">

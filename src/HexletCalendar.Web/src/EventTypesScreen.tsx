@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 type EventType = components['schemas']['EventType']
 type EventTypes = components['schemas']['EventTypes']
 
-export default function EventTypesScreen({ owner }: { owner: boolean }) {
+export default function EventTypesScreen({ owner, onContinue }: { owner: boolean, onContinue?: (eventType: EventType) => void }) {
   const [items, setItems] = useState<EventType[] | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -108,6 +108,10 @@ export default function EventTypesScreen({ owner }: { owner: boolean }) {
         </form>
       </CardContent>
     </Card>}
+    {!owner && onContinue && <Button disabled={selected === null} onClick={() => {
+      const item = items?.find(item => item.id === selected)
+      if (item) onContinue(item)
+    }}>Продолжить</Button>}
     <Button asChild variant="outline"><a href="/">На главную</a></Button>
   </div>
 }

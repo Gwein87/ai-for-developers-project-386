@@ -5,6 +5,7 @@ namespace HexletCalendar.Data;
 public sealed class CalendarDbContext(DbContextOptions<CalendarDbContext> options) : DbContext(options)
 {
     public DbSet<EventTypeEntity> EventTypes => Set<EventTypeEntity>();
+    public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +23,19 @@ public sealed class CalendarDbContext(DbContextOptions<CalendarDbContext> option
             entity.Property(item => item.Name).IsRequired().HasMaxLength(100);
             entity.Property(item => item.Description).IsRequired().HasMaxLength(2000);
         });
+        modelBuilder.Entity<BookingEntity>(entity =>
+        {
+            entity.ToTable("Bookings", table => table.HasCheckConstraint("CK_Bookings_Interval", "EndAt > StartAt"));
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).ValueGeneratedOnAdd();
+            entity.HasOne<EventTypeEntity>().WithMany().HasForeignKey(item => item.EventTypeId).OnDelete(DeleteBehavior.Restrict);
+            entity.Property(item => item.EventTypeName).IsRequired().HasMaxLength(100);
+            entity.Property(item => item.GuestName).IsRequired().HasMaxLength(100);
+            entity.Property(item => item.GuestEmail).IsRequired().HasMaxLength(254);
+            entity.Property(item => item.IdempotencyKey).IsRequired().HasMaxLength(36);
+            entity.HasIndex(item => item.IdempotencyKey).IsUnique();
+            entity.HasIndex(item => new { item.StartAt, item.EndAt });
+        });
     }
 }
 
@@ -31,4 +45,16 @@ public sealed class EventTypeEntity
     public required string Name { get; set; }
     public required string Description { get; set; }
     public int DurationMinutes { get; set; }
+}
+
+public sealed class BookingEntity
+{
+    public int Id { get; set; }
+    public int EventTypeId { get; set; }
+    public required string EventTypeName { get; set; }
+    public long StartAt { get; set; }
+    public long EndAt { get; set; }
+    public required string GuestName { get; set; }
+    public required string GuestEmail { get; set; }
+    public required string IdempotencyKey { get; set; }
 }

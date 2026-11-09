@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/event-types/{id}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -40,6 +56,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Availability: {
+            /** Format: int32 */
+            eventTypeId: number;
+            timeZone: string;
+            serverNow: components["schemas"]["ServerTimestamp"];
+            windowStartDate: components["schemas"]["CalendarDate"];
+            windowEndDate: components["schemas"]["CalendarDate"];
+            days: components["schemas"]["AvailabilityDay"][];
+        };
+        AvailabilityDay: {
+            date: components["schemas"]["CalendarDate"];
+            slots: components["schemas"]["AvailabilitySlot"][];
+        };
+        AvailabilitySlot: {
+            startAt: components["schemas"]["SlotTimestamp"];
+            endAt: components["schemas"]["SlotTimestamp"];
+            isAvailable: boolean;
+        };
+        /** Format: date */
+        CalendarDate: string;
         CreateEventType: {
             name: string;
             description: string;
@@ -64,6 +100,10 @@ export interface components {
             status: number;
             code: string;
         };
+        /** Format: date-time */
+        ServerTimestamp: string;
+        /** Format: date-time */
+        SlotTimestamp: string;
         ValidationProblem: {
             type: string;
             title: string;
@@ -141,6 +181,55 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ValidationProblem"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Availability"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ValidationProblem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description Server error */
