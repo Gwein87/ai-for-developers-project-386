@@ -9,6 +9,16 @@ type Availability = components['schemas']['Availability']
 type Slot = components['schemas']['AvailabilitySlot']
 type Booking = components['schemas']['Booking']
 type ValidationProblem = components['schemas']['ValidationProblem']
+type BookingRequest = components['schemas']['CreateBooking']
+
+export const pendingBookingKey = 'hexlet-calendar.pending-booking'
+
+export type PendingBooking = {
+  key: string
+  body: BookingRequest
+  eventType: EventType
+  endAt: string
+}
 
 function time(value: string) {
   return new Intl.DateTimeFormat('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
@@ -40,10 +50,13 @@ type Props = {
   onGuestEmailChange: (value: string) => void
   onBack: () => void
   onNewBooking: () => void
+  onAttemptResolved: () => void
+  recoveredBooking?: PendingBooking | null
 }
 
 export default function AvailabilityScreen({
   eventType, guestName, guestEmail, onGuestNameChange, onGuestEmailChange, onBack, onNewBooking,
+  onAttemptResolved, recoveredBooking = null,
 }: Props) {
   const [calendar, setCalendar] = useState<Availability | null>(null)
   const [failed, setFailed] = useState(false)
@@ -51,14 +64,22 @@ export default function AvailabilityScreen({
   const [serverOffset, setServerOffset] = useState(0)
   const [now, setNow] = useState(0)
   const [selectedDate, setSelectedDate] = useState('')
-  const [slot, setSlot] = useState<Slot | null>(null)
-  const [confirming, setConfirming] = useState(false)
+  const [slot, setSlot] = useState<Slot | null>(recoveredBooking
+    ? { startAt: recoveredBooking.body.startAt, endAt: recoveredBooking.endAt, isAvailable: true }
+    : null)
+  const [confirming, setConfirming] = useState(recoveredBooking !== null)
   const [saving, setSaving] = useState(false)
   const [booking, setBooking] = useState<Booking | null>(null)
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [bookingMessage, setBookingMessage] = useState('')
-  const idempotencyAttempt = useRef<{ fingerprint: string, key: string } | null>(null)
+  const [pendingBooking, setPendingBooking] = useState<PendingBooking | null>(recoveredBooking)
+  const [unknownResult, setUnknownResult] = useState(recoveredBooking !== null)
+  const [restoring, setRestoring] = useState(recoveredBooking !== null)
+  const idempotencyAttempt = useRef<{ fingerprint: string, key: string } | null>(recoveredBooking
+    ? { fingerprint: JSON.stringify(recoveredBooking.body), key: recoveredBooking.key }
+    : null)
   useEffect(() => {
+    if (restoring) return
     const controller = new AbortController()
     void fetch(`/api/event-types/${eventType.id}/availability`, { signal: controller.signal })
       .then(response => { if (!response.ok) throw new Error('Loading failed'); return response.json() })
@@ -73,7 +94,7 @@ export default function AvailabilityScreen({
       })
       .catch(() => { if (!controller.signal.aborted) setFailed(true) })
     return () => controller.abort()
-  }, [attempt, eventType.id])
+  }, [attempt, eventType.id, restoring])
   useEffect(() => {
     if (!calendar) return
     const timer = window.setInterval(() => {
@@ -88,21 +109,11 @@ export default function AvailabilityScreen({
     return () => window.clearInterval(timer)
   }, [calendar, serverOffset])
 
-  async function confirm(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!slot) return
+  async function submitBooking(currentAttempt: PendingBooking) {
     setSaving(true)
     setErrors({})
     setBookingMessage('')
-    const body: components['schemas']['CreateBooking'] = {
-      eventTypeId: eventType.id, startAt: slot.startAt, guestName, guestEmail,
-    }
-    const fingerprint = JSON.stringify(body)
-    let currentAttempt = idempotencyAttempt.current
-    if (currentAttempt?.fingerprint !== fingerprint) {
-      currentAttempt = { fingerprint, key: crypto.randomUUID() }
-      idempotencyAttempt.current = currentAttempt
-    }
+    const fingerprint = JSON.stringify(currentAttempt.body)
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST',
@@ -110,31 +121,56 @@ export default function AvailabilityScreen({
         body: fingerprint,
       })
       if (response.status === 201) {
+        window.sessionStorage.removeItem(pendingBookingKey)
+        setPendingBooking(null)
+        setUnknownResult(false)
+        onAttemptResolved()
         setBooking(await response.json() as Booking)
         return
       }
       const problem = await response.json() as components['schemas']['Problem'] | ValidationProblem
       if (response.status === 400 && problem.code === 'validation_error' && 'errors' in problem) {
+        window.sessionStorage.removeItem(pendingBookingKey)
+        setPendingBooking(null)
+        onAttemptResolved()
         setErrors(problem.errors)
         return
       }
       if (problem.code === 'slot_taken' || problem.code === 'invalid_slot') {
+        window.sessionStorage.removeItem(pendingBookingKey)
+        setPendingBooking(null)
+        onAttemptResolved()
         setBookingMessage(problem.code === 'slot_taken' ? 'Выбранное время уже занято. Выберите другое.' : 'Выбранное время больше недоступно. Выберите другое.')
         setConfirming(false)
         setSlot(null)
         setCalendar(null)
+        setRestoring(false)
         idempotencyAttempt.current = null
         setAttempt(value => value + 1)
         return
       }
-      setErrors({ form: [problem.code === 'temporarily_unavailable'
-        ? 'Сервис временно недоступен. Повторите попытку.'
-        : 'Результат отправки неизвестен. Безопасно повторите попытку.'] })
+      setUnknownResult(true)
     } catch {
-      setErrors({ form: ['Результат отправки неизвестен. Безопасно повторите попытку.'] })
+      setUnknownResult(true)
     } finally {
       setSaving(false)
     }
+  }
+
+  async function confirm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!slot) return
+    const body: BookingRequest = { eventTypeId: eventType.id, startAt: slot.startAt, guestName, guestEmail }
+    const fingerprint = JSON.stringify(body)
+    let identity = idempotencyAttempt.current
+    if (identity?.fingerprint !== fingerprint) {
+      identity = { fingerprint, key: crypto.randomUUID() }
+      idempotencyAttempt.current = identity
+    }
+    const currentAttempt = { key: identity.key, body, eventType, endAt: slot.endAt }
+    setPendingBooking(currentAttempt)
+    window.sessionStorage.setItem(pendingBookingKey, JSON.stringify(currentAttempt))
+    await submitBooking(currentAttempt)
   }
 
   if (booking) return <div className="max-w-xl space-y-6">
@@ -150,6 +186,21 @@ export default function AvailabilityScreen({
       </CardContent>
     </Card>
     <Button onClick={onNewBooking}>Начать новое бронирование</Button>
+  </div>
+
+  if (unknownResult && pendingBooking) return <div className="max-w-xl space-y-6">
+    <h1 className="text-3xl font-semibold">Не удалось подтвердить результат</h1>
+    <Card>
+      <CardHeader><CardTitle>{pendingBooking.eventType.name}</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p>{date(pendingBooking.body.startAt)}</p>
+        <p>{time(pendingBooking.body.startAt)}–{time(pendingBooking.endAt)}</p>
+        <p>{pendingBooking.body.guestName}</p>
+        <p>{pendingBooking.body.guestEmail}</p>
+      </CardContent>
+    </Card>
+    <p role="alert">Ответ не получен. Повтор безопасно проверит прежнюю попытку.</p>
+    <Button disabled={saving} onClick={() => void submitBooking(pendingBooking)}>{saving ? 'Отправка…' : 'Повторить'}</Button>
   </div>
 
   if (confirming && slot) return <div className="max-w-xl space-y-6">

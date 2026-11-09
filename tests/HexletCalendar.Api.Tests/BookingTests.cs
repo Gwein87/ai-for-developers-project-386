@@ -41,6 +41,28 @@ public sealed class BookingTests
     }
 
     [Fact]
+    public async Task LostResponseAfterCommitIsRecoveredWithOneStoredBooking()
+    {
+        using var factory = new CalendarApiFactory(Now);
+        using var client = factory.CreateClient();
+        var eventTypeId = await CreateEventTypeAsync(client, 45);
+        var key = Guid.NewGuid().ToString("D", CultureInfo.InvariantCulture);
+
+        using (var lostResponse = await PostAsync(client, key, eventTypeId, StartAt, "Анна", "guest@example.com"))
+        {
+            Assert.Equal(HttpStatusCode.Created, lostResponse.StatusCode);
+        }
+
+        factory.SetNow(new DateTimeOffset(2026, 11, 9, 8, 0, 0, TimeSpan.Zero));
+        using var recovered = await PostAsync(client, key, eventTypeId, StartAt, "Анна", "guest@example.com");
+        Assert.Equal(HttpStatusCode.Created, recovered.StatusCode);
+        Assert.Empty(await ApiContract.ValidateAsync(recovered, "/api/bookings", "post"));
+        using var body = JsonDocument.Parse(await recovered.Content.ReadAsStringAsync());
+        Assert.Equal(StartAt, body.RootElement.GetProperty("startAt").GetString());
+        Assert.Equal(1, await factory.CountBookingsAsync());
+    }
+
+    [Fact]
     public async Task SuccessfulKeyCannotBeReusedWithDifferentNormalizedData()
     {
         using var factory = new CalendarApiFactory(Now);

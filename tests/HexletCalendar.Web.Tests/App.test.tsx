@@ -4,8 +4,139 @@ import App from '../../src/HexletCalendar.Web/src/App'
 
 afterEach(() => {
   vi.useRealTimers()
+  window.sessionStorage.clear()
   window.history.replaceState(null, '', '/')
   vi.unstubAllEnvs()
+})
+
+it('retries an uncertain booking with the saved request identity', async () => {
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  const confirmed = {
+    id: 12, eventTypeId: 77, eventTypeName: eventType.name,
+    startAt: '2026-11-09T06:15:00Z', endAt: '2026-11-09T07:00:00Z',
+    guestName: 'Анна', guestEmail: 'guest@example.com',
+  }
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [eventType] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(availability())))
+    .mockRejectedValueOnce(new Error('Response lost'))
+    .mockResolvedValueOnce(new Response(JSON.stringify(confirmed), { status: 201 }))
+  vi.stubGlobal('fetch', fetchMock)
+  window.history.replaceState(null, '', '/booking')
+  const view = render(<App />)
+  fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.click(await screen.findByRole('button', { name: '09:15–10:00' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Анна' } })
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'guest@example.com' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Подтвердить бронирование' }))
+
+  expect(await screen.findByRole('heading', { name: 'Не удалось подтвердить результат' })).toBeInTheDocument()
+  expect(window.sessionStorage.length).toBe(1)
+  const firstRequest = fetchMock.mock.calls[2][1]
+  view.unmount()
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Не удалось подтвердить результат' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByRole('heading', { name: 'Бронирование создано' })).toBeInTheDocument()
+  const retriedRequest = fetchMock.mock.calls[3][1]
+  expect(retriedRequest.headers['Idempotency-Key']).toBe(firstRequest.headers['Idempotency-Key'])
+  expect(retriedRequest.body).toBe(firstRequest.body)
+  expect(window.sessionStorage.length).toBe(0)
+})
+
+it('restores an uncertain booking after refresh without rechecking its past slot', async () => {
+  const key = '11111111-1111-4111-8111-111111111111'
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  const body = { eventTypeId: 77, startAt: '2026-11-09T06:15:00Z', guestName: 'Анна', guestEmail: 'guest@example.com' }
+  window.sessionStorage.setItem('hexlet-calendar.pending-booking', JSON.stringify({
+    key, body, eventType, endAt: '2026-11-09T07:00:00Z',
+  }))
+  const confirmed = { id: 12, eventTypeName: eventType.name, endAt: '2026-11-09T07:00:00Z', ...body }
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify(confirmed), { status: 201 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [eventType] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(availability())))
+  vi.stubGlobal('fetch', fetchMock)
+  window.history.replaceState(null, '', '/booking')
+
+  render(<App />)
+
+  expect(await screen.findByRole('heading', { name: 'Не удалось подтвердить результат' })).toBeInTheDocument()
+  expect(screen.getByText('Разбор проекта')).toBeInTheDocument()
+  expect(screen.getByText('Анна')).toBeInTheDocument()
+  expect(screen.getByText('guest@example.com')).toBeInTheDocument()
+  expect(fetchMock).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByRole('heading', { name: 'Бронирование создано' })).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledWith('/api/bookings', expect.objectContaining({
+    body: JSON.stringify(body), headers: expect.objectContaining({ 'Idempotency-Key': key }),
+  }))
+  fireEvent.click(screen.getByRole('button', { name: 'Начать новое бронирование' }))
+  fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  expect(await screen.findByRole('heading', { name: 'Выберите дату и время' })).toBeInTheDocument()
+})
+
+it('clears a finally rejected attempt and uses a new identity for a new slot', async () => {
+  const oldKey = '11111111-1111-4111-8111-111111111111'
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  const oldBody = { eventTypeId: 77, startAt: '2026-11-09T06:15:00Z', guestName: 'Анна', guestEmail: 'guest@example.com' }
+  window.sessionStorage.setItem('hexlet-calendar.pending-booking', JSON.stringify({
+    key: oldKey, body: oldBody, eventType, endAt: '2026-11-09T07:00:00Z',
+  }))
+  const refreshed = availability()
+  refreshed.days[0].slots[1].isAvailable = false
+  const confirmed = {
+    id: 13, eventTypeId: 77, eventTypeName: eventType.name,
+    startAt: '2026-11-10T06:15:00Z', endAt: '2026-11-10T07:00:00Z',
+    guestName: 'Анна', guestEmail: 'guest@example.com',
+  }
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ status: 400, code: 'invalid_slot' }), { status: 400 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify(refreshed)))
+    .mockResolvedValueOnce(new Response(JSON.stringify(confirmed), { status: 201 }))
+  vi.stubGlobal('fetch', fetchMock)
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByText('Выбранное время больше недоступно. Выберите другое.')).toBeInTheDocument()
+  expect(window.sessionStorage.length).toBe(0)
+  fireEvent.click(await screen.findByRole('button', { name: '2026-11-10' }))
+  fireEvent.click(screen.getByRole('button', { name: '09:15–10:00' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  expect(screen.getByLabelText('Имя')).toHaveValue('Анна')
+  expect(screen.getByLabelText('Email')).toHaveValue('guest@example.com')
+  fireEvent.click(screen.getByRole('button', { name: 'Подтвердить бронирование' }))
+  expect(await screen.findByRole('heading', { name: 'Бронирование создано' })).toBeInTheDocument()
+  expect(fetchMock.mock.calls[2][1].headers['Idempotency-Key']).not.toBe(oldKey)
+})
+
+it('keeps the saved attempt retryable after a 503 response', async () => {
+  const key = '11111111-1111-4111-8111-111111111111'
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  const body = { eventTypeId: 77, startAt: '2026-11-09T06:15:00Z', guestName: 'Анна', guestEmail: 'guest@example.com' }
+  window.sessionStorage.setItem('hexlet-calendar.pending-booking', JSON.stringify({
+    key, body, eventType, endAt: '2026-11-09T07:00:00Z',
+  }))
+  const confirmed = { id: 12, eventTypeName: eventType.name, endAt: '2026-11-09T07:00:00Z', ...body }
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ status: 503, code: 'temporarily_unavailable' }), { status: 503 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify(confirmed), { status: 201 }))
+  vi.stubGlobal('fetch', fetchMock)
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByRole('heading', { name: 'Не удалось подтвердить результат' })).toBeInTheDocument()
+  expect(screen.queryByText(/время уже занято/i)).not.toBeInTheDocument()
+  expect(window.sessionStorage.length).toBe(1)
+  fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByRole('heading', { name: 'Бронирование создано' })).toBeInTheDocument()
+  expect(fetchMock.mock.calls[0][1].headers['Idempotency-Key']).toBe(key)
+  expect(fetchMock.mock.calls[1][1].headers['Idempotency-Key']).toBe(key)
 })
 
 it('expires a slot with server time and refreshes the window after Moscow midnight', async () => {
