@@ -41,6 +41,23 @@ model Availability {
   @minItems(14) @maxItems(14) days: AvailabilityDay[];
 }
 @extension("additionalProperties", false)
+model CreateBooking {
+  @minValue(1) @maxValue(2147483647) eventTypeId: int32;
+  startAt: SlotTimestamp;
+  @minLength(1) @maxLength(100) guestName: string;
+  @minLength(1) @maxLength(254) @format("email") guestEmail: string;
+}
+@extension("additionalProperties", false)
+model Booking {
+  @minValue(1) @maxValue(2147483647) id: int32;
+  @minValue(1) @maxValue(2147483647) eventTypeId: int32;
+  @minLength(1) @maxLength(100) eventTypeName: string;
+  startAt: SlotTimestamp;
+  endAt: SlotTimestamp;
+  @minLength(1) @maxLength(100) guestName: string;
+  @minLength(1) @maxLength(254) @format("email") guestEmail: string;
+}
+@extension("additionalProperties", false)
 model Problem {
   type: string;
   title: string;
@@ -66,6 +83,17 @@ op getAvailability(@path id: string):
   | { @statusCode statusCode: 200; @body body: Availability; }
   | { @statusCode statusCode: 400; @header contentType: "application/problem+json"; @body body: ValidationProblem; }
   | { @statusCode statusCode: 404; @header contentType: "application/problem+json"; @body body: Problem; }
+  | InternalError;
+@route("/api/bookings") @post @operationId("createBooking")
+op createBooking(
+  @header("Idempotency-Key") idempotencyKey: string,
+  @body body: CreateBooking
+):
+  | { @statusCode statusCode: 201; @body body: Booking; }
+  | { @statusCode statusCode: 400; @header contentType: "application/problem+json"; @body body: ValidationProblem | Problem; }
+  | { @statusCode statusCode: 404; @header contentType: "application/problem+json"; @body body: Problem; }
+  | { @statusCode statusCode: 409; @header contentType: "application/problem+json"; @body body: Problem; }
+  | { @statusCode statusCode: 503; @header contentType: "application/problem+json"; @body body: Problem; }
   | InternalError;
 @route("/api/health") @get @operationId("getHealth")
 op getHealth(): { @statusCode statusCode: 200; @header contentType: "text/plain"; @body body: "Healthy"; };

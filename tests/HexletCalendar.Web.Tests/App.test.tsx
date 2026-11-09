@@ -194,6 +194,93 @@ it.each(['/booking', '/admin'])('offers a retry after loading fails at %s', asyn
   expect(await screen.findByText(path === '/admin' ? 'Создайте первый тип события' : 'Пока нет доступных типов событий')).toBeInTheDocument()
 })
 
+it('submits the third screen once and replaces it with the confirmed booking', async () => {
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  const confirmed = {
+    id: 12, eventTypeId: 77, eventTypeName: eventType.name,
+    startAt: '2026-11-09T06:15:00Z', endAt: '2026-11-09T07:00:00Z',
+    guestName: 'Анна-Мария', guestEmail: 'Guest@Example.COM',
+  }
+  let resolveSave: (response: Response) => void = () => undefined
+  const save = new Promise<Response>(resolve => { resolveSave = resolve })
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [eventType] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(availability())))
+    .mockReturnValueOnce(save)
+  vi.stubGlobal('fetch', fetchMock)
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.click(await screen.findByRole('button', { name: '09:15–10:00' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.change(screen.getByLabelText('Имя'), { target: { value: '  Анна-Мария  ' } })
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: '  Guest@Example.COM  ' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Подтвердить бронирование' }))
+  expect(screen.getByRole('button', { name: 'Отправка…' })).toBeDisabled()
+  expect(fetchMock).toHaveBeenCalledTimes(3)
+  const request = fetchMock.mock.calls[2]
+  expect(request[0]).toBe('/api/bookings')
+  expect(request[1].headers['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/)
+  expect(JSON.parse(request[1].body)).toEqual({ eventTypeId: 77, startAt: confirmed.startAt, guestName: '  Анна-Мария  ', guestEmail: 'Guest@Example.COM' })
+  resolveSave(new Response(JSON.stringify(confirmed), { status: 201 }))
+  expect(await screen.findByRole('heading', { name: 'Бронирование создано' })).toBeInTheDocument()
+  expect(screen.getByText('Анна-Мария')).toBeInTheDocument()
+  expect(screen.getByText('Guest@Example.COM')).toBeInTheDocument()
+  expect(screen.getByText('Письмо с подтверждением не отправляется')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Начать новое бронирование' })).toBeInTheDocument()
+})
+
+it('shows booking field errors and preserves guest data while navigating back', async () => {
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [eventType] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(availability())))
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      type: 'urn:hexlet-calendar:problem:validation_error', title: 'Ошибка проверки данных', status: 400, code: 'validation_error',
+      errors: { guestName: ['Введите имя'], guestEmail: ['Введите корректный email'] },
+    }), { status: 400 })))
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.click(await screen.findByRole('button', { name: '09:15–10:00' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Анна' } })
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'bad' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Подтвердить бронирование' }))
+  expect(await screen.findByText('Введите корректный email')).toBeInTheDocument()
+  expect(screen.getByLabelText('Имя')).toHaveValue('Анна')
+  fireEvent.click(screen.getByRole('button', { name: 'Назад к выбору времени' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  expect(screen.getByLabelText('Имя')).toHaveValue('Анна')
+  expect(screen.getByLabelText('Email')).toHaveValue('bad')
+})
+
+it('returns from a taken slot to refreshed availability without losing guest data', async () => {
+  const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
+  const refreshed = availability()
+  refreshed.days[0].slots[1].isAvailable = false
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [eventType] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify(availability())))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ status: 409, code: 'slot_taken' }), { status: 409 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify(refreshed))))
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.click(await screen.findByRole('button', { name: '09:15–10:00' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
+  fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Анна' } })
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'guest@example.com' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Подтвердить бронирование' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Выбранное время уже занято')
+  expect(screen.getByRole('heading', { name: 'Выберите дату и время' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '09:15–10:00' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled()
+})
+
 it('shows field errors beside the controls and preserves entered values', async () => {
   vi.stubGlobal('fetch', vi.fn()
     .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] })))

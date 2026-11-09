@@ -23,4 +23,12 @@ internal static class ApiProblems
         Status = StatusCodes.Status500InternalServerError,
         Code = "internal_error",
     }, statusCode: StatusCodes.Status500InternalServerError, contentType: "application/problem+json");
+
+    internal static IResult Problem(int status, string code, string title) => Results.Json(new Problem
+    {
+        Type = $"urn:hexlet-calendar:problem:{code}",
+        Title = title,
+        Status = status,
+        Code = code,
+    }, statusCode: status, contentType: "application/problem+json");
 }

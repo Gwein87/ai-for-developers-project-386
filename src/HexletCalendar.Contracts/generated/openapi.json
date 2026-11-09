@@ -6,6 +6,100 @@
   },
   "tags": [],
   "paths": {
+    "/api/bookings": {
+      "post": {
+        "operationId": "createBooking",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The request has succeeded and a new resource has been created as a result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Problem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBooking"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/event-types": {
       "get": {
         "operationId": "getEventTypes",
@@ -241,10 +335,91 @@
         },
         "additionalProperties": false
       },
+      "Booking": {
+        "type": "object",
+        "required": [
+          "id",
+          "eventTypeId",
+          "eventTypeName",
+          "startAt",
+          "endAt",
+          "guestName",
+          "guestEmail"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "eventTypeId": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "eventTypeName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "startAt": {
+            "$ref": "#/components/schemas/SlotTimestamp"
+          },
+          "endAt": {
+            "$ref": "#/components/schemas/SlotTimestamp"
+          },
+          "guestName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "guestEmail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 254,
+            "format": "email"
+          }
+        },
+        "additionalProperties": false
+      },
       "CalendarDate": {
         "type": "string",
         "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
         "format": "date"
+      },
+      "CreateBooking": {
+        "type": "object",
+        "required": [
+          "eventTypeId",
+          "startAt",
+          "guestName",
+          "guestEmail"
+        ],
+        "properties": {
+          "eventTypeId": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "startAt": {
+            "$ref": "#/components/schemas/SlotTimestamp"
+          },
+          "guestName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "guestEmail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 254,
+            "format": "email"
+          }
+        },
+        "additionalProperties": false
       },
       "CreateEventType": {
         "type": "object",

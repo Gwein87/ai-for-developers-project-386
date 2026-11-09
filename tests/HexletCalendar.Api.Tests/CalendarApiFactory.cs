@@ -12,11 +12,11 @@ internal sealed class CalendarApiFactory : WebApplicationFactory<Program>
 {
     private readonly string directory = Directory.CreateTempSubdirectory("hexlet-calendar-").FullName;
     private readonly string database;
-    private readonly DateTimeOffset? now;
+    private readonly FixedTimeProvider? timeProvider;
 
     internal CalendarApiFactory(DateTimeOffset? now = null)
     {
-        this.now = now;
+        timeProvider = now is { } timestamp ? new FixedTimeProvider(timestamp) : null;
         database = Path.Combine(directory, "calendar.db");
         File.Copy(Path.Combine(RepositoryPaths.Root, "tests", "HexletCalendar.Api.Tests", "Fixtures", "calendar.db"), database);
     }
@@ -26,9 +26,9 @@ internal sealed class CalendarApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.ConfigureLogging(logging => logging.ClearProviders());
         builder.UseSetting("ConnectionStrings:Calendar", $"Data Source={database};Mode=ReadWrite;Pooling=False");
-        if (now is { } timestamp)
+        if (timeProvider is not null)
         {
-            builder.ConfigureServices(services => services.AddSingleton<TimeProvider>(new FixedTimeProvider(timestamp)));
+            builder.ConfigureServices(services => services.AddSingleton<TimeProvider>(timeProvider));
         }
     }
 
@@ -50,6 +50,42 @@ internal sealed class CalendarApiFactory : WebApplicationFactory<Program>
         await context.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    internal async Task<int> CountBookingsAsync()
+    {
+        using var context = new CalendarDbContext(new DbContextOptionsBuilder<CalendarDbContext>()
+            .UseSqlite($"Data Source={database};Mode=ReadWrite;Pooling=False").Options);
+        return await context.Bookings.CountAsync().ConfigureAwait(false);
+    }
+
+    internal string ConnectionString => $"Data Source={database};Mode=ReadWrite;Pooling=False";
+
+    internal void SetNow(DateTimeOffset now)
+    {
+        if (timeProvider is null)
+        {
+            throw new InvalidOperationException("This factory uses the system clock.");
+        }
+        timeProvider.Now = now;
+    }
+
+    internal async Task InstallFailingBookingTriggerAsync()
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection(ConnectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+        using var command = connection.CreateCommand();
+        command.CommandText = "CREATE TRIGGER FailBooking BEFORE INSERT ON Bookings BEGIN SELECT RAISE(ABORT, 'failure'); END;";
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    internal async Task DropFailingBookingTriggerAsync()
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection(ConnectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+        using var command = connection.CreateCommand();
+        command.CommandText = "DROP TRIGGER FailBooking;";
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
@@ -68,6 +104,7 @@ internal sealed class CalendarApiFactory : WebApplicationFactory<Program>
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => now;
+        internal DateTimeOffset Now { get; set; } = now;
+        public override DateTimeOffset GetUtcNow() => Now;
     }
 }

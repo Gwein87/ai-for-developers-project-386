@@ -84,6 +84,70 @@ namespace HexletCalendar.Contracts.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Booking
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Range(1, 2147483647)]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypeId")]
+        [System.ComponentModel.DataAnnotations.Range(1, 2147483647)]
+        public int EventTypeId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypeName")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(100, MinimumLength = 1)]
+        public string EventTypeName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00Z$")]
+        public string StartAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("endAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00Z$")]
+        public string EndAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("guestName")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(100, MinimumLength = 1)]
+        public string GuestName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("guestEmail")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(254, MinimumLength = 1)]
+        public string GuestEmail { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateBooking
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypeId")]
+        [System.ComponentModel.DataAnnotations.Range(1, 2147483647)]
+        public int EventTypeId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00Z$")]
+        public string StartAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("guestName")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(100, MinimumLength = 1)]
+        public string GuestName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("guestEmail")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(254, MinimumLength = 1)]
+        public string GuestEmail { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateEventType
     {
 
@@ -184,7 +248,22 @@ namespace HexletCalendar.Contracts.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum Response
+    public partial class Response
+    {
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum Response2
     {
 
         [System.Runtime.Serialization.EnumMember(Value = @"Healthy")]

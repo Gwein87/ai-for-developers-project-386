@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/api/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/event-types": {
         parameters: {
             query?: never;
@@ -74,8 +90,28 @@ export interface components {
             endAt: components["schemas"]["SlotTimestamp"];
             isAvailable: boolean;
         };
+        Booking: {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            eventTypeId: number;
+            eventTypeName: string;
+            startAt: components["schemas"]["SlotTimestamp"];
+            endAt: components["schemas"]["SlotTimestamp"];
+            guestName: string;
+            /** Format: email */
+            guestEmail: string;
+        };
         /** Format: date */
         CalendarDate: string;
+        CreateBooking: {
+            /** Format: int32 */
+            eventTypeId: number;
+            startAt: components["schemas"]["SlotTimestamp"];
+            guestName: string;
+            /** Format: email */
+            guestEmail: string;
+        };
         CreateEventType: {
             name: string;
             description: string;
@@ -123,6 +159,77 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    createBooking: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBooking"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded and a new resource has been created as a result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ValidationProblem"] | components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state of the server. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getEventTypes: {
         parameters: {
             query?: never;
