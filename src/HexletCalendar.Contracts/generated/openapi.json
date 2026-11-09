@@ -98,6 +98,32 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "getBookings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bookings"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/event-types": {
@@ -380,6 +406,30 @@
             "minLength": 1,
             "maxLength": 254,
             "format": "email"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Bookings": {
+        "type": "object",
+        "required": [
+          "timeZone",
+          "serverNow",
+          "items"
+        ],
+        "properties": {
+          "timeZone": {
+            "type": "string",
+            "pattern": "^Europe/Moscow$"
+          },
+          "serverNow": {
+            "$ref": "#/components/schemas/ServerTimestamp"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Booking"
+            }
           }
         },
         "additionalProperties": false

@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getBookings"];
         put?: never;
         post: operations["createBooking"];
         delete?: never;
@@ -102,6 +102,11 @@ export interface components {
             /** Format: email */
             guestEmail: string;
         };
+        Bookings: {
+            timeZone: string;
+            serverNow: components["schemas"]["ServerTimestamp"];
+            items: components["schemas"]["Booking"][];
+        };
         /** Format: date */
         CalendarDate: string;
         CreateBooking: {
@@ -159,6 +164,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getBookings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bookings"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     createBooking: {
         parameters: {
             query?: never;

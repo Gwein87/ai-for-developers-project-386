@@ -32,7 +32,12 @@ internal sealed class CalendarApiFactory : WebApplicationFactory<Program>
         }
     }
 
-    internal async Task SeedBookingAsync(int eventTypeId, DateTimeOffset start, DateTimeOffset end)
+    internal async Task<int> SeedBookingAsync(
+        int eventTypeId,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        string guestName = "Другой гость",
+        string guestEmail = "other@example.com")
     {
         using var context = new CalendarDbContext(new DbContextOptionsBuilder<CalendarDbContext>()
             .UseSqlite($"Data Source={database};Mode=ReadWrite;Pooling=False").Options);
@@ -43,11 +48,12 @@ internal sealed class CalendarApiFactory : WebApplicationFactory<Program>
             EventTypeName = eventType.Name,
             StartAt = start.ToUnixTimeSeconds(),
             EndAt = end.ToUnixTimeSeconds(),
-            GuestName = "Другой гость",
-            GuestEmail = "other@example.com",
+            GuestName = guestName,
+            GuestEmail = guestEmail,
             IdempotencyKey = Guid.NewGuid().ToString("D"),
         });
         await context.SaveChangesAsync().ConfigureAwait(false);
+        return context.Bookings.Local.Single().Id;
     }
 
     internal async Task<int> CountBookingsAsync()

@@ -58,6 +58,12 @@ model Booking {
   @minLength(1) @maxLength(254) @format("email") guestEmail: string;
 }
 @extension("additionalProperties", false)
+model Bookings {
+  @pattern("^Europe/Moscow$") timeZone: string;
+  serverNow: ServerTimestamp;
+  items: Booking[];
+}
+@extension("additionalProperties", false)
 model Problem {
   type: string;
   title: string;
@@ -95,5 +101,7 @@ op createBooking(
   | { @statusCode statusCode: 409; @header contentType: "application/problem+json"; @body body: Problem; }
   | { @statusCode statusCode: 503; @header contentType: "application/problem+json"; @body body: Problem; }
   | InternalError;
+@route("/api/bookings") @get @operationId("getBookings")
+op getBookings(): { @statusCode statusCode: 200; @body body: Bookings; } | InternalError;
 @route("/api/health") @get @operationId("getHealth")
 op getHealth(): { @statusCode statusCode: 200; @header contentType: "text/plain"; @body body: "Healthy"; };

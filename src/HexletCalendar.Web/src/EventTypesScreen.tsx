@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 type EventType = components['schemas']['EventType']
 type EventTypes = components['schemas']['EventTypes']
 
-export default function EventTypesScreen({ owner, onContinue }: { owner: boolean, onContinue?: (eventType: EventType) => void }) {
+export default function EventTypesScreen({ owner, embedded = false, onContinue }: { owner: boolean, embedded?: boolean, onContinue?: (eventType: EventType) => void }) {
   const [items, setItems] = useState<EventType[] | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -58,11 +58,7 @@ export default function EventTypesScreen({ owner, onContinue }: { owner: boolean
 
   const fieldClass = 'w-full rounded-md border bg-background px-3 py-2'
   return <div className="space-y-8">
-    <h1 className="text-3xl font-semibold">{owner ? 'Админка' : 'Выберите тип события'}</h1>
-    {owner && <div role="tablist" aria-label="Управление календарём" className="flex gap-3">
-      <Button role="tab" aria-selected="true">Типы событий</Button>
-      <Button role="tab" aria-selected="false" variant="outline" disabled>Бронирования</Button>
-    </div>}
+    {!embedded && <h1 className="text-3xl font-semibold">{owner ? 'Админка' : 'Выберите тип события'}</h1>}
     {loadFailed ? <div role="alert" className="space-y-3">
       <p>Не удалось загрузить типы событий</p>
       <Button onClick={() => { setLoadFailed(false); setItems(null); setAttempt(value => value + 1) }}>Повторить</Button>

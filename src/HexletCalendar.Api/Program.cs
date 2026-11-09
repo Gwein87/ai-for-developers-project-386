@@ -28,6 +28,7 @@ if (app.Environment.IsDevelopment())
         Path.Combine(AppContext.BaseDirectory, "Contracts", "openapi.json"), "application/json"));
 }
 app.MapHealthChecks("/api/health");
+app.MapGet("/api/bookings", BookingsEndpoint.GetAsync);
 app.MapPost("/api/bookings", BookingEndpoint.PostAsync);
 app.MapGet("/api/event-types/{id}/availability", AvailabilityEndpoint.GetAsync);
 app.MapGet("/api/event-types", async (CalendarDbContext database, CancellationToken cancellation) =>

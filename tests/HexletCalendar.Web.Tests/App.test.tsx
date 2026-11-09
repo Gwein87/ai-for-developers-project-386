@@ -57,6 +57,79 @@ it('renders the welcome page with the service description and navigation', () =>
   expect(screen.queryByRole('button', { name: 'Проверить API' })).not.toBeInTheDocument()
 })
 
+it('shows owner bookings with Moscow time, contacts, states, and an accessible future highlight', async () => {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      timeZone: 'Europe/Moscow', serverNow: '2026-11-09T07:15:00Z', items: [
+        { id: 1, eventTypeId: 2, eventTypeName: 'Завершённый звонок', startAt: '2026-11-09T06:00:00Z', endAt: '2026-11-09T06:30:00Z', guestName: 'Иван Петров', guestEmail: 'ivan@example.com' },
+        { id: 2, eventTypeId: 3, eventTypeName: 'Текущий звонок', startAt: '2026-11-09T07:00:00Z', endAt: '2026-11-09T07:30:00Z', guestName: 'Анна-Мария', guestEmail: 'anna@example.com' },
+        { id: 3, eventTypeId: 4, eventTypeName: 'Будущий звонок', startAt: '2026-11-10T08:00:00Z', endAt: '2026-11-10T08:45:00Z', guestName: 'Ли', guestEmail: 'li@example.com' },
+      ],
+    }))))
+  window.history.replaceState(null, '', '/admin')
+  render(<App />)
+  await screen.findByText('Создайте первый тип события')
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Бронирования' }))
+
+  expect(await screen.findByRole('heading', { name: 'Будущий звонок' })).toBeInTheDocument()
+  expect(screen.getByText('Московское время, UTC+3')).toBeInTheDocument()
+  expect(screen.getByText('10 ноября 2026 г.')).toBeInTheDocument()
+  expect(screen.getByText('11:00–11:45')).toBeInTheDocument()
+  expect(screen.getByText('Ли')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'li@example.com' })).toHaveAttribute('href', 'mailto:li@example.com')
+  expect(screen.getByText('Завершено')).toBeInTheDocument()
+  expect(screen.getByText('Идёт')).toBeInTheDocument()
+  expect(screen.getByRole('listitem', { name: 'Предстоящее бронирование' })).toHaveTextContent('Предстоит')
+  expect(screen.getByRole('tab', { name: 'Бронирования' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: 'Типы событий' })).toHaveAttribute('aria-selected', 'false')
+})
+
+it('updates booking states from server time and refreshes the history after Moscow midnight', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-11-09T06:59:59Z'))
+  const booking = { id: 1, eventTypeId: 2, eventTypeName: 'Разбор', startAt: '2026-11-09T07:00:00Z', endAt: '2026-11-09T07:30:00Z', guestName: 'Иван', guestEmail: 'ivan@example.com' }
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ timeZone: 'Europe/Moscow', serverNow: '2026-11-09T06:59:59Z', items: [booking] })))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ timeZone: 'Europe/Moscow', serverNow: '2026-11-09T21:00:01Z', items: [] })))
+  vi.stubGlobal('fetch', fetchMock)
+  window.history.replaceState(null, '', '/admin')
+  render(<App />)
+  await act(async () => { await Promise.resolve(); await Promise.resolve() })
+  fireEvent.click(screen.getByRole('tab', { name: 'Бронирования' }))
+  await act(async () => { await Promise.resolve(); await Promise.resolve() })
+  expect(screen.getByText('Предстоит')).toBeInTheDocument()
+
+  await act(async () => { vi.advanceTimersByTime(1_000) })
+  expect(screen.getByText('Идёт')).toBeInTheDocument()
+  vi.setSystemTime(new Date('2026-11-09T07:29:59Z'))
+  await act(async () => { vi.advanceTimersByTime(1_000) })
+  expect(screen.getByText('Завершено')).toBeInTheDocument()
+
+  vi.setSystemTime(new Date('2026-11-09T20:59:59Z'))
+  await act(async () => { vi.advanceTimersByTime(2_000); await Promise.resolve(); await Promise.resolve() })
+  expect(fetchMock).toHaveBeenCalledTimes(3)
+  expect(screen.getByText('Бронирований пока нет')).toBeInTheDocument()
+})
+
+it('distinguishes booking loading, empty, and retryable error states', async () => {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] })))
+    .mockRejectedValueOnce(new Error('Offline'))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ timeZone: 'Europe/Moscow', serverNow: '2026-11-09T07:15:00Z', items: [] }))))
+  window.history.replaceState(null, '', '/admin')
+  render(<App />)
+  await screen.findByText('Создайте первый тип события')
+  fireEvent.click(screen.getByRole('tab', { name: 'Бронирования' }))
+  expect(screen.getByRole('status')).toHaveTextContent('Загрузка бронирований')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось загрузить бронирования')
+  expect(screen.queryByText('Бронирований пока нет')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByText('Бронирований пока нет')).toBeInTheDocument()
+})
+
 it.each(['UTC', 'Pacific/Honolulu', 'Asia/Tokyo'])('lets a guest choose a future Moscow slot on a separate calendar screen and continue in %s', async timezone => {
   vi.stubEnv('TZ', timezone)
   const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
