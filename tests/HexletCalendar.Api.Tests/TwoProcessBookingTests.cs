@@ -32,9 +32,7 @@ public sealed class TwoProcessBookingTests
                 var zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow");
                 var tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).DateTime).AddDays(1);
                 var morning = new DateTimeOffset(tomorrow.ToDateTime(new TimeOnly(9, 0)), zone.GetUtcOffset(tomorrow.ToDateTime(TimeOnly.MinValue))).ToUniversalTime();
-                var responses = await Task.WhenAll(
-                    PostAsync(first, firstType, morning),
-                    PostAsync(second, secondType, morning.AddMinutes(15))).ConfigureAwait(true);
+                var responses = await PostCompetingBookingsAsync(first, second, firstType, secondType, morning);
                 using var firstResponse = responses[0];
                 using var secondResponse = responses[1];
                 Assert.Equal(1, responses.Count(response => response.StatusCode == HttpStatusCode.Created));
@@ -49,6 +47,36 @@ public sealed class TwoProcessBookingTests
         finally
         {
             Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static async Task<HttpResponseMessage[]> PostCompetingBookingsAsync(
+        HttpClient first,
+        HttpClient second,
+        int firstType,
+        int secondType,
+        DateTimeOffset morning)
+    {
+        var bothReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var readyCount = 0;
+        void Ready()
+        {
+            if (Interlocked.Increment(ref readyCount) == 2) bothReady.TrySetResult();
+        }
+
+        var firstRequest = PostAsync(first, firstType, morning, Ready, start.Task);
+        var secondRequest = PostAsync(second, secondType, morning.AddMinutes(15), Ready, start.Task);
+        try
+        {
+            await bothReady.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            start.SetResult();
+            return await Task.WhenAll(firstRequest, secondRequest).ConfigureAwait(false);
+        }
+        finally
+        {
+            start.TrySetResult();
+            await Task.WhenAll(firstRequest, secondRequest).ConfigureAwait(false);
         }
     }
 
@@ -100,7 +128,12 @@ public sealed class TwoProcessBookingTests
         return body.RootElement.GetProperty("id").GetInt32();
     }
 
-    private static async Task<HttpResponseMessage> PostAsync(HttpClient client, int eventTypeId, DateTimeOffset start)
+    private static async Task<HttpResponseMessage> PostAsync(
+        HttpClient client,
+        int eventTypeId,
+        DateTimeOffset start,
+        Action ready,
+        Task startSignal)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/bookings")
         {
@@ -113,6 +146,8 @@ public sealed class TwoProcessBookingTests
             }),
         };
         request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("D", CultureInfo.InvariantCulture));
+        ready();
+        await startSignal.ConfigureAwait(false);
         return await client.SendAsync(request).ConfigureAwait(false);
     }
 

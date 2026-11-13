@@ -2,29 +2,10 @@ import { useEffect, useState } from 'react'
 import type { components } from '../../HexletCalendar.Contracts/generated/schema'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { moscowCalendarDate, moscowDateLabel, moscowTime } from './moscowTime'
 
 type Bookings = components['schemas']['Bookings']
 type Booking = components['schemas']['Booking']
-
-function date(value: string) {
-  return new Intl.DateTimeFormat('ru-RU', {
-    timeZone: 'Europe/Moscow', day: 'numeric', month: 'long', year: 'numeric',
-  }).format(new Date(value))
-}
-
-function time(value: string) {
-  return new Intl.DateTimeFormat('ru-RU', {
-    timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit',
-  }).format(new Date(value))
-}
-
-function moscowDate(value: number) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date(value))
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value ?? ''
-  return `${part('year')}-${part('month')}-${part('day')}`
-}
 
 function bookingState(booking: Booking, now: number) {
   if (Date.parse(booking.endAt) <= now) return 'Завершено'
@@ -57,11 +38,11 @@ export default function BookingsScreen() {
 
   useEffect(() => {
     if (!bookings) return
-    const responseDate = moscowDate(Date.parse(bookings.serverNow))
+    const responseDate = moscowCalendarDate(Date.parse(bookings.serverNow))
     const timer = window.setInterval(() => {
       const current = Date.now() + serverOffset
       setNow(current)
-      if (moscowDate(current) !== responseDate) {
+      if (moscowCalendarDate(current) !== responseDate) {
         setBookings(null)
         setAttempt(value => value + 1)
       }
@@ -85,8 +66,8 @@ export default function BookingsScreen() {
           <Card className={future ? 'bg-accent ring-2 ring-primary' : undefined}>
             <CardHeader><CardTitle>{booking.eventTypeName}</CardTitle></CardHeader>
             <CardContent className="grid gap-2 sm:grid-cols-2">
-              <p>{date(booking.startAt)}</p>
-              <p>{time(booking.startAt)}–{time(booking.endAt)}</p>
+              <p>{moscowDateLabel(booking.startAt)}</p>
+              <p>{moscowTime(booking.startAt)}–{moscowTime(booking.endAt)}</p>
               <p>{booking.guestName}</p>
               <a className="underline" href={`mailto:${booking.guestEmail}`}>{booking.guestEmail}</a>
               <p className="font-semibold">{state}</p>

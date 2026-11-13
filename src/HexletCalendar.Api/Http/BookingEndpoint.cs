@@ -208,19 +208,7 @@ internal static class BookingEndpoint
             && localEnd.TimeOfDay <= new TimeSpan(18, 0, 0);
     }
 
-    private static IResult Created(BookingEntity item) => Results.Json(new Booking
-    {
-        Id = item.Id,
-        EventTypeId = item.EventTypeId,
-        EventTypeName = item.EventTypeName,
-        StartAt = Format(item.StartAt),
-        EndAt = Format(item.EndAt),
-        GuestName = item.GuestName,
-        GuestEmail = item.GuestEmail,
-    }, statusCode: StatusCodes.Status201Created);
-
-    private static string Format(long value) => DateTimeOffset.FromUnixTimeSeconds(value).UtcDateTime
-        .ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+    private static IResult Created(BookingEntity item) => Results.Json(BookingDtoMapper.Map(item), statusCode: StatusCodes.Status201Created);
 
     private static bool IsLocked(SqliteException exception) => exception.SqliteErrorCode is 5 or 6;
 

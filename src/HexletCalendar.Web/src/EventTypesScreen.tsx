@@ -58,7 +58,7 @@ export default function EventTypesScreen({ owner, embedded = false, onContinue }
 
   const fieldClass = 'w-full rounded-md border bg-background px-3 py-2'
   return <div className="space-y-8">
-    {!embedded && <h1 className="text-3xl font-semibold">{owner ? 'Админка' : 'Выберите тип события'}</h1>}
+    {!embedded && <h1 className="text-3xl font-semibold">{owner ? 'Владелец календаря' : 'Выберите тип события'}</h1>}
     {loadFailed ? <div role="alert" className="space-y-3">
       <p>Не удалось загрузить типы событий</p>
       <Button onClick={() => { setLoadFailed(false); setItems(null); setAttempt(value => value + 1) }}>Повторить</Button>

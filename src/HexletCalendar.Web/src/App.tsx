@@ -8,7 +8,7 @@ export default function App() {
   const section = pathname === '/booking'
     ? 'Запись на звонок'
     : pathname === '/admin'
-      ? 'Админка'
+      ? 'Владелец календаря'
       : null
 
   return (
@@ -26,8 +26,8 @@ export default function App() {
               </a>
             </Button>
             <Button asChild variant="outline">
-              <a href="/admin" aria-current={section === 'Админка' ? 'page' : undefined}>
-                Админка
+              <a href="/admin" aria-current={section === 'Владелец календаря' ? 'page' : undefined}>
+                Владелец календаря
               </a>
             </Button>
           </nav>
@@ -36,7 +36,7 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-6 py-20 sm:py-32">
         {section ? (
-          section === 'Админка' ? <AdminScreen /> : <BookingScreen />
+          section === 'Владелец календаря' ? <AdminScreen /> : <BookingScreen />
         ) : (
           <div className="max-w-2xl space-y-6">
             <div className="flex size-14 items-center justify-center rounded-2xl bg-muted">
@@ -46,7 +46,7 @@ export default function App() {
               Календарь звонков
             </h1>
             <p className="max-w-xl text-lg leading-8 text-muted-foreground">
-              Выберите тип события и удобное свободное время — сервис поможет записаться
+              Выберите тип события и удобный слот — сервис поможет записаться
               на звонок без долгих согласований.
             </p>
           </div>

@@ -1,4 +1,3 @@
-using System.Globalization;
 using HexletCalendar.Contracts.Generated;
 using HexletCalendar.Data;
 using Microsoft.EntityFrameworkCore;
@@ -19,24 +18,13 @@ internal static class BookingsEndpoint
             .OrderBy(item => item.StartAt)
             .ThenBy(item => item.Id)
             .ToListAsync(cancellation).ConfigureAwait(false);
-        var items = entities.Select(item => new Booking
-        {
-            Id = item.Id,
-            EventTypeId = item.EventTypeId,
-            EventTypeName = item.EventTypeName,
-            StartAt = FormatUtc(item.StartAt),
-            EndAt = FormatUtc(item.EndAt),
-            GuestName = item.GuestName,
-            GuestEmail = item.GuestEmail,
-        }).ToList();
+        var items = entities.Select(BookingDtoMapper.Map).ToList();
         return Results.Ok(new Bookings
         {
             TimeZone = "Europe/Moscow",
-            ServerNow = FormatUtc(now.ToUnixTimeSeconds()),
+            ServerNow = BookingDtoMapper.FormatUtc(now),
             Items = items,
         });
     }
 
-    private static string FormatUtc(long unixSeconds) => DateTimeOffset.FromUnixTimeSeconds(unixSeconds)
-        .UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 }

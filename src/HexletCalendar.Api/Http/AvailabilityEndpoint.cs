@@ -44,8 +44,8 @@ internal static class AvailabilityEndpoint
                 var end = start.AddMinutes(eventType.DurationMinutes);
                 slots.Add(new AvailabilitySlot
                 {
-                    StartAt = FormatUtc(start),
-                    EndAt = FormatUtc(end),
+                    StartAt = BookingDtoMapper.FormatUtc(start),
+                    EndAt = BookingDtoMapper.FormatUtc(end),
                     IsAvailable = start > now && !busy.Any(item => item.StartAt < end.ToUnixTimeSeconds() && item.EndAt > start.ToUnixTimeSeconds()),
                 });
             }
@@ -55,12 +55,11 @@ internal static class AvailabilityEndpoint
         {
             EventTypeId = eventTypeId,
             TimeZone = "Europe/Moscow",
-            ServerNow = FormatUtc(now),
+            ServerNow = BookingDtoMapper.FormatUtc(now),
             WindowStartDate = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             WindowEndDate = today.AddDays(13).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             Days = days,
         });
     }
 
-    private static string FormatUtc(DateTimeOffset timestamp) => timestamp.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 }

@@ -79,6 +79,27 @@ it('restores an uncertain booking after refresh without rechecking its past slot
   expect(await screen.findByRole('heading', { name: 'Выберите дату и время' })).toBeInTheDocument()
 })
 
+it.each([
+  ['event_type_not_found', 'Тип события больше не существует. Выберите другой тип события.'],
+  ['idempotency_key_reused', 'Не удалось проверить эту попытку бронирования. Начните новое бронирование.'],
+])('ends a saved attempt after definitive refusal %s', async (code, message) => {
+  window.sessionStorage.setItem('hexlet-calendar.pending-booking', JSON.stringify({
+    key: '11111111-1111-4111-8111-111111111111',
+    body: { eventTypeId: 77, startAt: '2026-11-09T06:15:00Z', guestName: 'Анна', guestEmail: 'guest@example.com' },
+    eventType: { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 },
+    endAt: '2026-11-09T07:00:00Z',
+  }))
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    code, title: 'Отказ', status: code === 'event_type_not_found' ? 404 : 409,
+  }), { status: code === 'event_type_not_found' ? 404 : 409 })))
+  window.history.replaceState(null, '', '/booking')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Повторить' }))
+  expect(await screen.findByText(message)).toBeInTheDocument()
+  expect(window.sessionStorage.length).toBe(0)
+  expect(screen.queryByRole('heading', { name: 'Не удалось подтвердить результат' })).not.toBeInTheDocument()
+})
+
 it('clears a finally rejected attempt and uses a new identity for a new slot', async () => {
   const oldKey = '11111111-1111-4111-8111-111111111111'
   const eventType = { id: 77, name: 'Разбор проекта', description: 'Обсудим архитектуру', durationMinutes: 45 }
@@ -179,12 +200,12 @@ it('renders the welcome page with the service description and navigation', () =>
     screen.getByRole('heading', { level: 1, name: 'Календарь звонков' }),
   ).toBeInTheDocument()
   expect(screen.getByText(
-    'Выберите тип события и удобное свободное время — сервис поможет записаться на звонок без долгих согласований.',
+    'Выберите тип события и удобный слот — сервис поможет записаться на звонок без долгих согласований.',
   )).toBeInTheDocument()
 
   const navigation = within(screen.getByRole('navigation', { name: 'Основная навигация' }))
   expect(navigation.getByRole('link', { name: 'Записаться' })).toHaveAttribute('href', '/booking')
-  expect(navigation.getByRole('link', { name: 'Админка' })).toHaveAttribute('href', '/admin')
+  expect(navigation.getByRole('link', { name: 'Владелец календаря' })).toHaveAttribute('href', '/admin')
   expect(screen.queryByRole('button', { name: 'Проверить API' })).not.toBeInTheDocument()
 })
 
@@ -314,11 +335,11 @@ it.each([false, true])('keeps occupied dates selectable and shows empty availabi
   render(<App />)
   fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
   fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
-  expect(await screen.findByText('На эту дату свободного времени нет')).toBeInTheDocument()
+  expect(await screen.findByText('На эту дату нет доступных слотов')).toBeInTheDocument()
   expect(screen.getByRole('group', { name: 'Календарь' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '2026-11-09' })).toBeEnabled()
-  if (wholeWindow) expect(screen.getByText('В ближайшие 14 дней свободного времени нет')).toBeInTheDocument()
-  else expect(screen.queryByText('В ближайшие 14 дней свободного времени нет')).not.toBeInTheDocument()
+  if (wholeWindow) expect(screen.getByText('В ближайшие 14 дней нет доступных слотов')).toBeInTheDocument()
+  else expect(screen.queryByText('В ближайшие 14 дней нет доступных слотов')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '2026-11-22' }))
   expect(screen.getByRole('button', { name: '2026-11-22' })).toHaveAttribute('aria-pressed', 'true')
   if (wholeWindow) expect(screen.getByRole('button', { name: '09:15–10:00' })).toBeDisabled()
@@ -336,8 +357,8 @@ it('distinguishes an availability loading failure from empty dates and retries',
   fireEvent.click(await screen.findByRole('radio', { name: 'Выбрать Разбор проекта' }))
   fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось загрузить доступность')
-  expect(screen.queryByText('На эту дату свободного времени нет')).not.toBeInTheDocument()
-  expect(screen.queryByText('В ближайшие 14 дней свободного времени нет')).not.toBeInTheDocument()
+  expect(screen.queryByText('На эту дату нет доступных слотов')).not.toBeInTheDocument()
+  expect(screen.queryByText('В ближайшие 14 дней нет доступных слотов')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled()
   fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
   expect(await screen.findByRole('button', { name: '2026-11-22' })).toBeEnabled()
