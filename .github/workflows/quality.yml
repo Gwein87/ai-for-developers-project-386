@@ -25,7 +25,7 @@ jobs:
       - name: Check GitHub Actions workflows
         uses: jdx/jactionlint@a65ab044e916760429068fe5794b8306abdfcbb9 # v2.3.0
         with:
-          files: .github/workflows/quality.yml .github/workflows/osv-scanner.yml
+          files: .github/workflows/quality.yml .github/workflows/osv-scanner.yml .github/workflows/release-please.yml
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
