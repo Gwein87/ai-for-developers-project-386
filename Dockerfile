@@ -26,8 +26,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=api-build /app/publish ./
 RUN chown -R $APP_UID:$APP_UID /app/data
-ENV ASPNETCORE_URLS=http://+:8080
 ENV ConnectionStrings__Calendar="Data Source=/app/data/calendar.db;Mode=ReadWrite"
 EXPOSE 8080
 USER $APP_UID
-ENTRYPOINT ["dotnet", "HexletCalendar.Api.dll"]
+ENTRYPOINT ["sh", "-c", "exec dotnet HexletCalendar.Api.dll --urls http://0.0.0.0:${PORT:-8080}"]
