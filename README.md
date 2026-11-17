@@ -75,6 +75,40 @@ API предоставляет `GET /api/health`, `GET /api/event-types` и
 В production запросы `/api` должны направляться к бэкенду через reverse proxy.
 Для frontend-маршрутов `/booking` и `/admin` сервер должен возвращать `index.html`.
 
+## Локальный запуск в Docker
+
+Соберите один образ с API и frontend из корня репозитория:
+
+```sh
+docker build -t hexlet-calendar .
+```
+
+Для учебного запуска пустая SQLite подготавливается в образе через `dotnet ef`
+при `docker build`. Контейнер запускает приложение с этой базой; при новом
+контейнере данные сбрасываются. Миграции при запуске приложения не выполняются.
+
+```sh
+docker run --rm -p 8080:8080 hexlet-calendar
+```
+
+Приложение доступно на <http://localhost:8080>; проверка API —
+<http://localhost:8080/api/health>.
+
+Если данные нужно сохранить между запусками, подготовьте SQLite отдельно через
+CLI в каталоге `data` и подключите его к контейнеру (PowerShell):
+
+```powershell
+New-Item -ItemType Directory -Force data
+dotnet tool restore
+dotnet ef database update --project src/HexletCalendar.Data --startup-project src/HexletCalendar.Api --connection "Data Source=$((Resolve-Path data).Path)/calendar.db"
+docker run --rm -p 8080:8080 --mount "type=bind,source=$((Resolve-Path data).Path),target=/data" -e 'ConnectionStrings__Calendar=Data Source=/data/calendar.db;Mode=ReadWrite' hexlet-calendar
+```
+
+Каталог `data` хранит SQLite и её WAL-файлы между запусками контейнера.
+
+Для Linux/macOS используйте `-v "$(pwd)/data:/data"` вместо PowerShell-выражения
+в `--mount`; предварительно создайте каталог `data`.
+
 ## Сборка и проверки
 
 ```sh

@@ -22,6 +22,8 @@ var requestJson = new JsonSerializerOptions(JsonSerializerDefaults.Web)
 };
 var app = builder.Build();
 app.UseExceptionHandler(errors => errors.Run(context => ApiProblems.Internal().ExecuteAsync(context)));
+app.UseDefaultFiles();
+app.UseStaticFiles();
 if (app.Environment.IsDevelopment())
 {
     app.MapGet("/openapi/v1.json", () => Results.File(
@@ -98,6 +100,8 @@ app.MapPost("/api/event-types", async (HttpRequest httpRequest, CalendarDbContex
         DurationMinutes = item.DurationMinutes,
     }, statusCode: StatusCodes.Status201Created);
 });
+app.MapFallback("/api/{**path}", () => Results.NotFound());
+app.MapFallbackToFile("index.html");
 app.Run();
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
