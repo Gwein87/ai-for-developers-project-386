@@ -1,5 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Hosting;
 
 namespace HexletCalendar.Api.Tests;
 
@@ -9,12 +11,23 @@ public sealed class ApiSmokeTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task ApplicationStartsAndHealthEndpointReturnsHealthy()
     {
-        using var client = factory.CreateClient();
+        using var client = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureLogging(logging => logging.ClearProviders())).CreateClient();
         using var response = await client.GetAsync(
             new Uri("/api/health", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(await ApiContract.ValidateAsync(response, "/api/health", "get"));
         Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task UnknownApiEndpointReturnsNotFound()
+    {
+        using var client = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureLogging(logging => logging.ClearProviders())).CreateClient();
+        using var response = await client.GetAsync(new Uri("/api/unknown", UriKind.Relative));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

@@ -75,6 +75,61 @@ API предоставляет `GET /api/health`, `GET /api/event-types` и
 В production запросы `/api` должны направляться к бэкенду через reverse proxy.
 Для frontend-маршрутов `/booking` и `/admin` сервер должен возвращать `index.html`.
 
+## Локальный запуск в Docker
+
+Соберите один образ с API и frontend из корня репозитория:
+
+```sh
+docker build -t hexlet-calendar .
+```
+
+Для учебного запуска пустая SQLite подготавливается в образе через `dotnet ef`
+при `docker build`. Контейнер запускает приложение с этой базой; при новом
+контейнере данные сбрасываются. Миграции при запуске приложения не выполняются.
+
+```sh
+docker run --rm -p 8080:8080 hexlet-calendar
+```
+
+Контейнер слушает порт из `PORT` (по умолчанию 8080). Например:
+
+```sh
+docker run --rm -e PORT=9090 -p 9090:9090 hexlet-calendar
+```
+
+Приложение доступно на <http://localhost:8080>; проверка API —
+<http://localhost:8080/api/health>.
+
+Учебный экземпляр на Render: <https://hexlet-calendar-386.onrender.com>.
+Он использует бесплатный сервис без постоянного диска. После перезапуска сервиса,
+нового развёртывания или пересоздания контейнера данные сбрасываются до пустой
+базы из образа, поэтому созданные типы событий и бронирования исчезают.
+
+Для подключения Render MCP к Codex используйте OAuth:
+
+```sh
+codex mcp add render --url https://mcp.render.com/mcp --oauth-client-id codex
+```
+
+Завершите вход в открывшемся браузере. Безопасный шаблон конфигурации находится
+в `.codex/config.toml.example`; данные OAuth-сессии и ключи в репозиторий не
+добавляются.
+
+Если данные нужно сохранить между запусками, подготовьте SQLite отдельно через
+CLI в каталоге `data` и подключите его к контейнеру (PowerShell):
+
+```powershell
+New-Item -ItemType Directory -Force data
+dotnet tool restore
+dotnet ef database update --project src/HexletCalendar.Data --startup-project src/HexletCalendar.Api --connection "Data Source=$((Resolve-Path data).Path)/calendar.db"
+docker run --rm -p 8080:8080 --mount "type=bind,source=$((Resolve-Path data).Path),target=/data" -e 'ConnectionStrings__Calendar=Data Source=/data/calendar.db;Mode=ReadWrite' hexlet-calendar
+```
+
+Каталог `data` хранит SQLite и её WAL-файлы между запусками контейнера.
+
+Для Linux/macOS используйте `-v "$(pwd)/data:/data"` вместо PowerShell-выражения
+в `--mount`; предварительно создайте каталог `data`.
+
 ## Сборка и проверки
 
 ```sh

@@ -1,0 +1,4 @@
+# Connect Render with OAuth using the command in README.md.
+# Never commit access tokens or API keys.
+[mcp_servers.render]
+url = "https://mcp.render.com/mcp"
