@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { components } from '../../HexletCalendar.Contracts/generated/schema'
+import { createEventType, getEventTypes } from '../../HexletCalendar.Contracts/generated/sdk/sdk.gen'
+import './apiClient'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -20,9 +22,8 @@ export default function EventTypesScreen({ owner, embedded = false, onContinue }
   const [saving, setSaving] = useState(false)
   useEffect(() => {
     const controller = new AbortController()
-    void fetch('/api/event-types', { signal: controller.signal })
-      .then(response => { if (!response.ok) throw new Error('Loading failed'); return response.json() })
-      .then((body: EventTypes) => { if (!controller.signal.aborted) setItems(body.items) })
+    void getEventTypes({ signal: controller.signal, throwOnError: true, parseAs: 'json' })
+      .then(({ data }) => { if (!controller.signal.aborted) setItems((data as EventTypes).items) })
       .catch(() => { if (!controller.signal.aborted) setLoadFailed(true) })
     return () => controller.abort()
   }, [attempt])
@@ -34,16 +35,14 @@ export default function EventTypesScreen({ owner, embedded = false, onContinue }
     setSaving(true)
     try {
       const body: components['schemas']['CreateEventType'] = { name, description, durationMinutes: Number(duration) }
-      const response = await fetch('/api/event-types', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      })
-      if (response.status === 400) {
-        const problem: components['schemas']['ValidationProblem'] = await response.json()
+      const response = await createEventType({ body, parseAs: 'json' })
+      if (response.response?.status === 400) {
+        const problem = response.error as components['schemas']['ValidationProblem']
         setErrors(problem.errors)
         return
       }
-      if (response.status !== 201) throw new Error('Creation failed')
-      const item: EventType = await response.json()
+      if (response.response?.status !== 201 || !response.data) throw new Error('Creation failed')
+      const item: EventType = response.data
       setItems(current => [...(current ?? []), item].sort((a, b) => a.id - b.id))
       setName('')
       setDescription('')

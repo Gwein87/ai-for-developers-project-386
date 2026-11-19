@@ -115,3 +115,4 @@ coverage/
 .env.*
 !.env.example
 .playwright-mcp/
+test-results/

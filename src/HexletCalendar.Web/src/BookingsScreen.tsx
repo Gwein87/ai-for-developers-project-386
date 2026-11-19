@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { components } from '../../HexletCalendar.Contracts/generated/schema'
+import { getBookings } from '../../HexletCalendar.Contracts/generated/sdk/sdk.gen'
+import './apiClient'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { moscowCalendarDate, moscowDateLabel, moscowTime } from './moscowTime'
@@ -22,9 +24,9 @@ export default function BookingsScreen() {
 
   useEffect(() => {
     const controller = new AbortController()
-    void fetch('/api/bookings', { signal: controller.signal })
-      .then(response => { if (!response.ok) throw new Error('Loading failed'); return response.json() })
-      .then((body: Bookings) => {
+    void getBookings({ signal: controller.signal, throwOnError: true, parseAs: 'json' })
+      .then(({ data }) => {
+        const body = data as Bookings
         if (!controller.signal.aborted) {
           const receivedNow = Date.parse(body.serverNow)
           setServerOffset(receivedNow - Date.now())

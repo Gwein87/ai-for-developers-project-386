@@ -3,10 +3,12 @@
   "workspaces": {
     ".": {
       "entry": [
-        "tests/HexletCalendar.Web.Tests/**/*.test.tsx"
+        "tests/HexletCalendar.Web.Tests/**/*.test.tsx",
+        "tests/HexletCalendar.E2E.Tests/**/*.spec.ts"
       ],
       "project": [
         "tests/HexletCalendar.Web.Tests/**/*.{ts,tsx}",
+        "tests/HexletCalendar.E2E.Tests/**/*.{ts,tsx}",
         "scripts/**/*.mjs"
       ]
     },
