@@ -136,8 +136,10 @@ docker run --rm -p 8080:8080 --mount "type=bind,source=$((Resolve-Path data).Pat
 npm run check
 ```
 
-Команда запускает линтер, тесты фронтенда и бэкенда, а затем production-сборку
-React-приложения. GitHub Actions выполняет эту же команду при каждом `push`.
+Команда запускает линтер, тесты фронтенда и бэкенда, браузерный сценарий с
+настоящим API и отдельной SQLite, а затем production-сборку React-приложения.
+GitHub Actions выполняет эту же команду при каждом `push`. Перед локальным
+запуском установите Chromium командой `npx playwright install chromium`.
 
 В обязательные quality gates входят:
 
@@ -204,7 +206,7 @@ Health-проверка остаётся доступной без подгот�
 ## Контракт API
 
 Редактируемый источник — `src/HexletCalendar.Contracts/main.tsp`.
-OpenAPI 3.0.0 JSON, DTO C# и типы TypeScript находятся в `generated` и хранятся
+OpenAPI 3.0.0 JSON, DTO C#, типы TypeScript и клиентский SDK находятся в `generated` и хранятся
 в Git с LF. После изменения TypeSpec выполните из корня:
 
 ```sh
@@ -213,7 +215,7 @@ npm run check
 ```
 
 Сгенерированные файлы вручную не редактируются. Проверка дважды независимо
-генерирует OpenAPI, TypeScript и DTO C#, сравнивая с сохранёнными файлами.
+генерирует OpenAPI, TypeScript, SDK и DTO C#, сравнивая с сохранёнными файлами.
 Отсутствующий артефакт также считается ошибкой.
 Приложения используют эти типы; HTTP-тесты проверяют ответы по OpenAPI.
 В Development `/openapi/v1.json` выдаёт этот же сгенерированный файл.

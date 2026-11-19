@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint'
 export default [
   { ignores: ['**/dist/**', '**/node_modules/**'] },
   {
-    files: ['*.config.{js,ts}', 'scripts/**/*.mjs'],
+    files: ['*.config.{js,ts}', 'scripts/**/*.mjs', 'tests/HexletCalendar.E2E.Tests/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       ecmaVersion: 2022,

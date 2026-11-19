@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { components } from '../../HexletCalendar.Contracts/generated/schema'
+import { createBooking, getAvailability } from '../../HexletCalendar.Contracts/generated/sdk/sdk.gen'
+import './apiClient'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { moscowCalendarDate, moscowDateLabel, moscowShortDate, moscowTime } from './moscowTime'
@@ -67,9 +69,9 @@ export default function AvailabilityScreen({
   useEffect(() => {
     if (restoring) return
     const controller = new AbortController()
-    void fetch(`/api/event-types/${eventType.id}/availability`, { signal: controller.signal })
-      .then(response => { if (!response.ok) throw new Error('Loading failed'); return response.json() })
-      .then((body: Availability) => {
+    void getAvailability({ path: { id: String(eventType.id) }, signal: controller.signal, throwOnError: true, parseAs: 'json' })
+      .then(({ data }) => {
+        const body = data as Availability
         if (!controller.signal.aborted) {
           const receivedNow = Date.parse(body.serverNow)
           setServerOffset(receivedNow - Date.now())
@@ -99,23 +101,18 @@ export default function AvailabilityScreen({
     setSaving(true)
     setErrors({})
     setBookingMessage('')
-    const fingerprint = JSON.stringify(currentAttempt.body)
     try {
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': currentAttempt.key },
-        body: fingerprint,
-      })
-      if (response.status === 201) {
+      const response = await createBooking({ body: currentAttempt.body, headers: { 'Idempotency-Key': currentAttempt.key }, parseAs: 'json' })
+      if (response.response?.status === 201 && response.data) {
         window.sessionStorage.removeItem(pendingBookingKey)
         setPendingBooking(null)
         setUnknownResult(false)
         onAttemptResolved()
-        setBooking(await response.json() as Booking)
+        setBooking(response.data as Booking)
         return
       }
-      const problem = await response.json() as components['schemas']['Problem'] | ValidationProblem
-      if (response.status === 400 && problem.code === 'validation_error' && 'errors' in problem) {
+      const problem = response.error as components['schemas']['Problem'] | ValidationProblem
+      if (response.response?.status === 400 && problem?.code === 'validation_error' && 'errors' in problem) {
         window.sessionStorage.removeItem(pendingBookingKey)
         setPendingBooking(null)
         onAttemptResolved()

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import App from '../../src/HexletCalendar.Web/src/App'
 
@@ -189,6 +189,7 @@ it('expires a slot with server time and refreshes the window after Moscow midnig
   vi.setSystemTime(new Date('2026-11-09T20:59:59Z'))
   await act(async () => { vi.advanceTimersByTime(2_000); await Promise.resolve() })
   await act(async () => { await Promise.resolve() })
+  await act(async () => { for (let index = 0; index < 10; index++) await Promise.resolve() })
   expect(fetchMock).toHaveBeenCalledTimes(3)
   expect(screen.getByRole('button', { name: '2026-11-23' })).toBeEnabled()
 })
@@ -443,7 +444,7 @@ it('submits the third screen once and replaces it with the confirmed booking', a
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: '  Guest@Example.COM  ' } })
   fireEvent.click(screen.getByRole('button', { name: 'Подтвердить бронирование' }))
   expect(screen.getByRole('button', { name: 'Отправка…' })).toBeDisabled()
-  expect(fetchMock).toHaveBeenCalledTimes(3)
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
   const request = fetchMock.mock.calls[2]
   expect(request[0]).toBe('/api/bookings')
   expect(request[1].headers['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/)

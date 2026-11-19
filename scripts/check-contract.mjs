@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { readFileSync, mkdtempSync, rmSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -35,6 +35,10 @@ try {
       join(root, 'node_modules', 'openapi-typescript', 'bin', 'cli.js'),
       join(output, 'openapi.json'), '-o', join(output, 'schema.d.ts'),
     ], { cwd: root, stdio: 'inherit' })
+    execFileSync(process.execPath, [
+      join(root, 'scripts', 'generate-sdk.mjs'),
+      join(output, 'openapi.json'), join(output, 'sdk'),
+    ], { cwd: root, stdio: 'inherit' })
     execFileSync('dotnet', [
       'run', '--project', 'src/HexletCalendar.ContractGenerator', '--configuration', 'Release', '--',
       join(output, 'openapi.json'), join(output, 'ApiDtos.g.cs'),
@@ -43,6 +47,18 @@ try {
       assert.deepEqual(readFileSync(join(output, file)), readFileSync(join(generated, file)),
         `${file}: generated output differs from the checked-in artifact`)
     }
+    function compareDirectory(relative) {
+      const actual = join(output, relative)
+      const expected = join(generated, relative)
+      const names = readdirSync(expected, { withFileTypes: true })
+      assert.deepEqual(readdirSync(actual).sort(), names.map(item => item.name).sort())
+      for (const entry of names) {
+        const child = join(relative, entry.name)
+        if (entry.isDirectory()) compareDirectory(child)
+        else assert.deepEqual(readFileSync(join(output, child)), readFileSync(join(generated, child)), child)
+      }
+    }
+    compareDirectory('sdk')
   }
   console.log('contract: two independent generations match all artifacts')
 } finally {
